@@ -93,6 +93,8 @@ entity AppLlrfCore is
       dacSigStatus        : in    DacSigStatusArray(1 downto 0);
       dacSigValids        : in    Slv7Array(1 downto 0);
       dacSigValues        : in    sampleDataVectorArray(1 downto 0, 6 downto 0);
+      -- Fault status
+      faultIn        : in  sl;
 
       -- AXI-Lite Port
       axiClk         : in  sl;
@@ -475,6 +477,7 @@ begin
        pulseOutI              => iSigGenFb,
        pulseOutQ              => qSigGenFb,
        modeOut                => trigMode,
+       faultIn                => faultIn,
        axilClk                => axiClk,
        axilRst                => axiRst,
        axilReadMaster         => readMaster(MODEL_INDEX_C),

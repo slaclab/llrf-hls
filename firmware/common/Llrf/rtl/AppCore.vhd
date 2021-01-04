@@ -234,6 +234,8 @@ architecture mapping of AppCore is
    signal rtmStreamMaster      : AxiStreamMasterType;
    signal rtmStreamSlave       : AxiStreamSlaveType;
 
+   signal fault                : sl := '0';
+
    constant DEBUG_C : boolean := true;
 
    component ila_0
@@ -405,6 +407,8 @@ begin
          dacSigStatus   => dacSigStatus,
          dacSigValids   => dacSigValids,
          dacSigValues   => dacSigValues,
+	 -- Fault status
+	 faultIn        => fault,
 
          -- AXI-Lite Port
          axiClk         => axilClk,
@@ -705,6 +709,8 @@ begin
          accelTrig       => s_trigPulse(2),
          dataTrig        => s_trigPulse(3),
          timestamp       => timingTrig.timestamp(63 downto 0),
+	 -- Fault Stauts
+	 faultOut        => fault,
          -- AXI-Lite Interface
          axilClk         => axilClk,
          axilRst         => axilRst,
