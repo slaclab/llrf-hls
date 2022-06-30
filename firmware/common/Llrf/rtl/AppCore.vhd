@@ -56,6 +56,8 @@ entity AppCore is
       jesdRst2x           : in    slv(1 downto 0);
       jesdUsrClk          : in    slv(1 downto 0);
       jesdUsrRst          : in    slv(1 downto 0);
+      appTimingClk        : out   sl := '0';
+      appTimingRst        : out   sl := '1';
       -- DaqMux/Trig Interface (timingClk domain)
       freezeHw            : out   slv(1 downto 0);
       timingTrig          : in    TimingTrigType;
@@ -90,6 +92,8 @@ entity AppCore is
       -- Top Level Interface
       ----------------------
       -- Timing Interface (timingClk domain)
+      recTimingClk        : in    sl;
+      recTimingRst        : in    sl;
       timingClk           : in    sl;
       timingRst           : in    sl;
       timingBus           : in    TimingBusType;
@@ -156,7 +160,7 @@ end AppCore;
 
 architecture mapping of AppCore is
 
-   constant NUM_AXI_MASTERS_C : natural := 9;
+   constant NUM_AXI_MASTERS_C : natural := 7;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, AXI_BASE_ADDR_G, 28, 24);  -- [0x8FFFFFFF:0x80000000]
 
@@ -167,8 +171,6 @@ architecture mapping of AppCore is
    --constant WAVEFORM_INDEX_C  : natural := 4;
    constant SYSGEN_INDEX_C    : natural := 5;
    constant MMCM_DRP_INDEX_C  : natural := 6;
-   constant BSSS_INDEX_C      : natural := 7;
-   constant BLD_INDEX_C       : natural := 8;
 
    signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray (NUM_AXI_MASTERS_C-1 downto 0);
@@ -185,6 +187,12 @@ architecture mapping of AppCore is
 
    -----------------Timing--------------------------
    constant TRIG_SIZE_C : integer := 16;
+   --  s_trigPulse assignments
+   --  (0) : triggers processing [like 120Hz, 360Hz, 1080Hz]
+   --  (1) : stndbyTrig to RTM
+   --  (2) : accelTrig to RTM
+   --  (3) : dataTrig to RTM
+   --  (4) : trigHw to DaqMux
    signal s_trigPulse   : slv((TRIG_SIZE_C/2)-1 downto 0);
    signal s_trigStrobe  : slv((TRIG_SIZE_C/2)-1 downto 0);
    signal s_trigIndex   : slv((TRIG_SIZE_C/2)-1 downto 0);
@@ -226,9 +234,9 @@ architecture mapping of AppCore is
    signal timingMessageSlv     : slv(TIMING_MESSAGE_BITS_C-1 downto 0);
    signal timingMessageSlvO    : slv(TIMING_MESSAGE_BITS_C-1 downto 0);
 
-   signal streamMaster         : AxiStreamMasterType;
-   signal streamSlave          : AxiStreamSlaveType;
-
+   signal trigTimeslot         : slv(4 downto 0);
+   signal trigTimestamp        : slv(63 downto 0);
+   
    signal hlsStreamMaster      : AxiStreamMasterType;
    signal hlsStreamSlave       : AxiStreamSlaveType;
    signal rtmStreamMaster      : AxiStreamMasterType;
@@ -236,25 +244,10 @@ architecture mapping of AppCore is
 
    signal fault                : sl := '0';
 
-   constant DEBUG_C : boolean := true;
-
-   component ila_0
-     port ( clk    : in sl;
-            probe0 : in slv(255 downto 0) );
-   end component;
+   signal clk91 , rst91 , lck91  : sl;
+   signal clk119, rst119, lck119 : sl;
 
 begin
-
-   GEN_DEBUG : if DEBUG_C generate
-     U_ILA : ila_0
-       port map ( clk                   => timingClk,
-                  probe0(            0) => timingRst,
-                  probe0(  2 downto  1) => s_trigMode,
-                  probe0(            3) => timingBus.strobe,
-                  probe0( 19 downto  4) => timingTrig.trigPulse,
-                  probe0( 27 downto 20) => s_trigPulse,
-                  probe0(255 downto 28) => (others=>'0') );
-   end generate;
 
     -- We want to see DAC values on DaqMux
    dacValids <= (others => (others => '1'));
@@ -368,6 +361,20 @@ begin
    end generate;
 
 
+   -----------------------
+   -- timeslot latching --
+   -----------------------
+   U_TimeSlot : entity xil_defaultlib.AppTimeSlot
+     generic map (
+       MODE_1080HZ_G    => false )
+     port map (
+       clk        => timingClk,
+       rst        => timingRst,
+       trig       => s_trigPulse(0),
+       message    => timingMessage,
+       timeStamp  => trigTimestamp,
+       timeSlot   => trigTimeslot );
+   
    ----------------
    -- SYSGEN Module
    ----------------
@@ -395,9 +402,10 @@ begin
          diagnStrobe => diagnBus.strobe,
          rfSwitch       => s_fpgaInterlock,
          timingClk      => timingClk,
+         timingRst      => timingRst,
          trigPulse      => s_trigPulse(0),
-         timeslot       => timingTrig.dmod(127 downto 125),
-         timestamp      => timingTrig.timestamp(63 downto 0),
+         timeslot       => trigTimeslot,
+         timestamp      => trigTimestamp,
          dmod           => timingTrig.dmod(191 downto 0),
 	 bsa            => timingTrig.bsa(127 downto 0),
          trigDaqOut     => open,
@@ -431,36 +439,28 @@ begin
                   timingIn  => timingBus,
                   timingOut => timingMessage );
 
-     streamMaster                 <= AXI_STREAM_MASTER_INIT_C;
-     axilReadSlaves (BLD_INDEX_C) <= AXI_LITE_READ_SLAVE_INIT_C;
-     axilWriteSlaves(BLD_INDEX_C) <= AXI_LITE_WRITE_SLAVE_INIT_C;
    end generate;
 
    GEN_LCLS_II : if APP_TIMING_MODE_C = 2 generate
      timingMessage <= timingBus.message;
-
-     U_BLD : entity xil_defaultlib.BldWrapper
-       generic map ( NUM_EDEFS_G => 2 )
-       port map (
-         -- Diagnostic data interface
-         diagnosticClk   => diagnClk,
-         diagnosticRst   => diagnRst,
-         diagnosticBus   => diagnBus,
-         -- AXI Lite interface
-         axilClk         => axilClk,
-         axilRst         => axilRst,
-         axilReadMaster  => axilReadMasters (BLD_INDEX_C),
-         axilReadSlave   => axilReadSlaves  (BLD_INDEX_C),
-         axilWriteMaster => axilWriteMasters(BLD_INDEX_C),
-         axilWriteSlave  => axilWriteSlaves (BLD_INDEX_C),
-         -- Timing ETH MSG Interface (axilClk domain)
-         ibEthMsgMaster  => AXI_STREAM_MASTER_INIT_C,
-         ibEthMsgSlave   => open,
-         obEthMsgMaster  => streamMaster,
-         obEthMsgSlave   => streamSlave );
-
    end generate;
 
+   U_DiagnBus : entity xil_defaultlib.AppDiagnBus
+     generic map (
+       FIFO_ADDR_WIDTH_G => 8 )  -- expect < 256 us delay in diagnBus
+     port map (
+       -- timingClk domain
+       timingClk      => timingClk,
+       timingRst      => timingRst,
+       timingStrobe   => timingBus.strobe,
+       timingMessage  => timingMessage,
+       trigger        => s_trigPulse(0),
+       -- diagnosticClk domain
+       diagnosticClk  => diagnClk,
+       diagnosticRst  => diagnRst,
+       diagnosticBusI => diagnBus,
+       diagnosticBusO => diagnosticBus );
+                
    timingMessageSlv <= toSlv(timingMessage);
 
    V2FIFO : entity surf.FifoAsync
@@ -479,29 +479,8 @@ begin
 
    diagnBus.timingMessage <= toTimingMessageType(timingMessageSlvO);
 
-   BSSS : entity xil_defaultlib.BsssWrapper
-     generic map ( NUM_EDEFS_G => 8 )
-     port map (
-       -- Diagnostic data interface
-       diagnosticClk   => diagnClk,
-       diagnosticRst   => diagnRst,
-       diagnosticBus   => diagnBus,
-       -- AXI Lite interface
-       axilClk         => axilClk,
-       axilRst         => axilRst,
-       axilReadMaster  => axilReadMasters (BSSS_INDEX_C),
-       axilReadSlave   => axilReadSlaves  (BSSS_INDEX_C),
-       axilWriteMaster => axilWriteMasters(BSSS_INDEX_C),
-       axilWriteSlave  => axilWriteSlaves (BSSS_INDEX_C),
-       -- Timing ETH MSG Interface (axilClk domain)
-       ibEthMsgMaster  => streamMaster,
-       ibEthMsgSlave   => streamSlave,
-       obEthMsgMaster  => obBpMsgServerMaster,
-       obEthMsgSlave   => obBpMsgServerSlave );
-
    diagnosticClk <= diagnClk;
    diagnosticRst <= diagnRst;
-   diagnosticBus <= diagnBus;
 
    -- Clock trigger divider - LCLS I  recovered timing clock*(3/21)
    -- Clock trigger divider - LCLS II recovered timing clock*(9/100)
@@ -513,10 +492,10 @@ begin
        FB_BUFG_G          => true,
        NUM_CLOCKS_G       => 1,
        BANDWIDTH_G        => "OPTIMIZED",
-       CLKIN_PERIOD_G     => ite(APP_TIMING_MODE_C=1,8.403,5.385),
-       DIVCLK_DIVIDE_G    => ite(APP_TIMING_MODE_C=1,1    ,5),
-       CLKFBOUT_MULT_F_G  => ite(APP_TIMING_MODE_C=1,10.0 ,31.50),
-       CLKOUT0_DIVIDE_F_G => ite(APP_TIMING_MODE_C=1,70.0 ,70.0),
+       CLKIN_PERIOD_G     => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,8.403,5.385),
+       DIVCLK_DIVIDE_G    => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,1    ,5),
+       CLKFBOUT_MULT_F_G  => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,10.0 ,31.50),
+       CLKOUT0_DIVIDE_F_G => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,70.0 ,70.0),
        CLKOUT0_PHASE_G    => 0.0,
        CLKOUT0_RST_HOLD_G => 32
        )
@@ -708,7 +687,7 @@ begin
          stndbyTrig      => s_trigPulse(1),
          accelTrig       => s_trigPulse(2),
          dataTrig        => s_trigPulse(3),
-         timestamp       => timingTrig.timestamp(63 downto 0),
+         timestamp       => trigTimestamp(63 downto 0),
 	 -- Fault Stauts
 	 faultOut        => fault,
          -- AXI-Lite Interface
@@ -780,4 +759,53 @@ begin
    freezeHw <= (others => '0');
 
 
+   GEN_APP_TIMING_CLK : if GEN_APP_TIMING_C generate
+     --
+     -- Clock managers for synthesizing 119 MHz from 186 MHz timingClk
+     --
+     --   I don't think we care much about the relative phasing of these
+     --   If we do, we can reset with a 71kHz strobe
+     --
+     U_MMCM_130 : entity surf.ClockManagerUltraScale
+       generic map (
+         INPUT_BUFG_G       => false,
+         FB_BUFG_G          => false,
+         NUM_CLOCKS_G       => 1,
+         CLKIN_PERIOD_G     => 5.385,    -- ClkIn 1300/7
+         CLKFBOUT_MULT_F_G  => 55.125,   -- VCO = 1023.75
+         DIVCLK_DIVIDE_G    => 10,
+         CLKOUT0_DIVIDE_F_G => 11.25,    -- Clk =  91
+         CLKOUT0_PHASE_G    => 0.0,
+         CLKOUT0_RST_HOLD_G => 32
+         )
+       port map (
+         clkIn     => recTimingClk,
+         rstIn     => recTimingRst,
+         clkOut(0) => clk91,
+         rstOut(0) => rst91,
+         locked    => lck91 );
+
+     U_MMCM_119 : entity surf.ClockManagerUltraScale
+       generic map (
+         INPUT_BUFG_G       => false,
+         FB_BUFG_G          => false,
+         NUM_CLOCKS_G       => 1,
+         CLKIN_PERIOD_G     => 10.989,   -- ClkIn =   91
+         CLKFBOUT_MULT_F_G  => 10.625,   -- VCO   = 966.875
+         CLKOUT0_DIVIDE_F_G => 8.125,    -- Clk   =  119
+         CLKOUT0_PHASE_G    => 0.0,
+         CLKOUT0_RST_HOLD_G => 32
+         )
+       port map (
+         clkIn     => clk91,
+         rstIn     => rst91,
+         clkOut(0) => clk119,
+         rstOut(0) => rst119,
+         locked    => lck119 );
+
+     appTimingClk <= clk119;
+     appTimingRst <= rst119;
+     
+   end generate;
+   
 end mapping;

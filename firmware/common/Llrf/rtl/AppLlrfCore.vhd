@@ -56,8 +56,9 @@ entity AppLlrfCore is
       -- Timing pulse trigger
       -- Note: Asynchronous
       timingClk      : in  sl;
+      timingRst      : in  sl;
       trigPulse      : in  sl;
-      timeslot       : in  slv(2 downto 0);
+      timeslot       : in  slv(4 downto 0);
       timestamp      : in  slv(63 downto 0);
       dmod           : in  slv(191 downto 0);
       bsa            : in  slv(127 downto 0);
@@ -188,7 +189,6 @@ architecture mapping of AppLlrfCore is
    signal iSigGenFb : slv(17 downto 0);
    signal qSigGenFb : slv(17 downto 0);
 
-   signal timeslotIn  : slv(4 downto 0)   := (others => '0');
    signal timestampIn : slv(191 downto 0) := (others => '0');
 
    constant DEBUG_C : boolean := false;
@@ -453,8 +453,6 @@ begin
    dacSigCtrl(0).start <= (others => '0');
    dacSigCtrl(1).start <= (others => trigPulseSync);
 
-   timeslotIn(2 downto 0) <= timeslot;
-
    U_MODEL : entity llrf_core.LlrfFeedbackWrapper
      generic map (
        TPD_G                => TPD_G,
@@ -465,7 +463,7 @@ begin
        timingClk              => timingClk,
        trigIn                 => trigPulse, -- sync'd inside for HLS
        trigInJesd2x           => trigPulseSync,
-       timeslotIn             => timeslotIn,
+       timeslotIn             => timeslot,
        timestampIn            => timestamp,
        dmodIn                 => dmod,
        bsaIn                  => bsa,
@@ -484,11 +482,45 @@ begin
        axilReadSlave          => readSlave(MODEL_INDEX_C),
        axilWriteMaster        => writeMaster(MODEL_INDEX_C),
        axilWriteSlave         => writeSlave(MODEL_INDEX_C),
+       --  Diagnostic bus interface?
+       -- diagnClk       => diagnClk,
+       -- diagnRst       => diagnRst,
+       -- diagnData      => diagn,
+       -- diagnFixed     => diagnFixed,
+       -- diagnSevr      => diagnSevr,
+       -- diagnStrobe    => diagnStrobe,
+       --
        streamClk      => streamClk,
        streamRst      => streamRst,
        streamMaster   => streamMaster,
        streamSlave    => streamSlave);
 
+   -- Fake diagnostic data
+   diagnClk <= axiClk;
+   diagnRst <= axiRst;
+   diagn     (0) <= timestamp(31 downto 0);
+   diagnFixed(0) <= '1';
+   diagn     (1) <= timestamp(63 downto 32);
+   diagnFixed(1) <= '1';
+   diagn     (2) <= toSlv(0,27) & timeslot;
+   diagnFixed(2) <= '1';
+   GEN_DIAG : for i in 3 to 31 generate
+     diagn     (i) <= toSlv(i,32);
+     diagnFixed(i) <= '0';
+   end generate;
+   diagnSevr <= (others=>"00");
+
+   U_Strobe : entity surf.OneShot
+     generic map (
+       IN_POLARITY_G => '0',
+       PULSE_BIT_WIDTH_G => 1 )
+     port map (
+       clk          => timingClk,
+       rst          => timingRst,
+       trigIn       => trigPulse,
+       pulseWidth(0)=> '1',
+       pulseOut     => diagnStrobe );
+     
    -- Need to translate debug waveforms to jesdClk(0) domain
    GEN_DAQ : for i in 7 downto 0 generate
      debug204(i).valid <= debug204_valid(i);
@@ -514,9 +546,6 @@ begin
 
      debug      (i/4, i mod 4) <= debug185(i).data;
      debugValids(i/4)(i mod 4) <= debug185(i).valid;
-
-     diagn    (i) <= diagnDataV(32*i+31 downto 32*i);
-     diagnSevr(i) <= diagnSevrV(2*i+1 downto 2*i);
    end generate;
 
    U_SYNC_TRIG : for i in 1 downto 0 generate
