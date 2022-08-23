@@ -492,10 +492,10 @@ begin
        FB_BUFG_G          => true,
        NUM_CLOCKS_G       => 1,
        BANDWIDTH_G        => "OPTIMIZED",
-       CLKIN_PERIOD_G     => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,8.403,5.385),
-       DIVCLK_DIVIDE_G    => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,1    ,5),
-       CLKFBOUT_MULT_F_G  => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,10.0 ,31.50),
-       CLKOUT0_DIVIDE_F_G => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,70.0 ,70.0),
+       CLKIN_PERIOD_G     => ite(APP_TIMING_MODE_C=1,8.403,5.385),
+       DIVCLK_DIVIDE_G    => ite(APP_TIMING_MODE_C=1,1    ,5),
+       CLKFBOUT_MULT_F_G  => ite(APP_TIMING_MODE_C=1,10.0 ,31.50),
+       CLKOUT0_DIVIDE_F_G => ite(APP_TIMING_MODE_C=1,70.0 ,70.0),
        CLKOUT0_PHASE_G    => 0.0,
        CLKOUT0_RST_HOLD_G => 32
        )
