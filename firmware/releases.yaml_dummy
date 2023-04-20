@@ -1,0 +1,22 @@
+
+GitBase: ..
+
+TopRoguePackage: llrf-hls
+
+Targets:
+################################################################################
+  LlrfGen2:
+    ImageDir: targets/LlrfGen2/images
+    Extensions:
+      - mcs
+      - cpsw.tar.gz
+################################################################################
+Releases:
+  all:
+    Primary: True
+    Targets:
+      #######################################
+      - LlrfGen2
+      #######################################
+    Types:
+      - FW_only
