@@ -16,7 +16,11 @@ use surf.StdRtlPkg.all;
 
 package AppOpts is
 
-  constant APP_TIMING_MODE_C : integer := 1; -- 1 or 2 (LCLS-I/II)
+  constant APP_TIMING_MODE_C : integer := 1; -- (1=NC, 2=SC, 3=NC from SC)
   constant UPCONVERT_V2_C    : boolean := false;
-
+  --  Timeslot mapping
+  constant MODE_1080HZ_C     : boolean := false;
+  constant MODE_DEST_C       : boolean := false;
+  -- HXR(3) => 1-6, SXR(4) => 7-12, DUMPBSY(2) => 13-18 
+  constant DEST_CHAN_C       : NaturalArray := ( 0, 0, 12, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 );
 end AppOpts;

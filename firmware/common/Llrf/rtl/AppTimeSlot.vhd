@@ -33,7 +33,9 @@ use unisim.vcomponents.all;
 
 entity AppTimeSlot is
    generic (
-      MODE_1080HZ_G : boolean := false
+     MODE_1080HZ_G : boolean := false;
+     MODE_DEST_G   : boolean := false;
+     DEST_CHAN_G   : NaturalArray := ( 0 => 0 )
       );
    port (
       -- Clocks and resets
@@ -72,6 +74,9 @@ begin
       if MODE_1080HZ_G then
         -- UED
         v.timeSlot  := message.control(0)(4 downto 0);
+      elsif MODE_DEST_G then
+        v.timeSlot  := toSlv(DEST_CHAN_G(conv_integer(message.beamRequest(7 downto 4)))+
+                             conv_integer(message.acTimeSlot),5);
       else
         -- LCLS-I/LCLS-II
         v.timeSlot  := "00" & message.acTimeSlot;

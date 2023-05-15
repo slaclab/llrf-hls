@@ -42,8 +42,7 @@ use work.LlrfPkg.all;
 entity AppLlrfCore is
    generic (
       TPD_G                : time     := 1 ns;
-      AXI_BASE_ADDR_G      : slv(31 downto 0);
-      NUM_OF_TRIG_PULSES_G : positive := 8
+      AXI_BASE_ADDR_G      : slv(31 downto 0)
    );
    port (
       --
@@ -88,6 +87,7 @@ entity AppLlrfCore is
 
       -- LLRF Mode Select
       trigMode       : out slv(1 downto 0);
+      trigIndex      : in  sl;
 
       -- DacSigCtrl
       dacSigCtrl          : out   DacSigCtrlArray(1 downto 0);
@@ -475,6 +475,7 @@ begin
        pulseOutI              => iSigGenFb,
        pulseOutQ              => qSigGenFb,
        modeOut                => trigMode,
+--       modeIn                 => trigIndex,
        faultIn                => faultIn,
        axilClk                => axiClk,
        axilRst                => axiRst,

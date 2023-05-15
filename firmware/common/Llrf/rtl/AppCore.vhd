@@ -189,38 +189,32 @@ architecture mapping of AppCore is
 
    -----------------Timing--------------------------
    --    New TimingTrig assignments
-   --  (0) : stndbyTrig HXR
-   --  (1) : accelTrig  HXR
-   --  (2) : stndbyTrig SXR
-   --  (3) : accelTrig  SXR
-   --  (4) : stndbyTrig DaqMux HXR
-   --  (5) : accelTrig  DaqMux HXR
-   --  (6) : stndbyTrig DaqMux SXR
-   --  (7) : accelTrig  DaqMux SXR
-   --  (8) : triggers processing [like 120 Hz ] [timeslot update, diagnbus ]
+   --      Event selection and trigger delay/width
+   --  (0) : accelTrig  Dest0
+   --  (1) : stndbyTrig Dest0
+   --  (2) : accelTrig  Dest1
+   --  (3) : stndbyTrig Dest1
+   --  (4) : accelTrig  Dest2
+   --  (5) : stndbyTrig Dest2
+   --  (6) : DaqMux
+   --  (7) : triggers processing [like 120 Hz ] [timeslot update, diagnbus ]
    --  s_trigPulse assignments
-   --  (0) : HXR
-   --  (1) : SXR
-   --  (2) : DaqMux HXR
-   --  (3) : DaqMux SXR
-   --  (4) : triggers processing
-   constant T_LLRF_HXR   : integer := 0;
-   constant T_LLRF_SXR   : integer := 1;
-   constant T_MOD_HXR    : integer := 2;
-   constant T_MOD_SXR    : integer := 3;
-   constant T_RTM_HXR    : integer := 4;
-   constant T_RTM_SXR    : integer := 5;
-   constant T_SSB_HXR    : integer := 6;
-   constant T_SSB_SXR    : integer := 7;
-   constant T_DAQMUX_HXR : integer := 8;
-   constant T_DAQMUX_SXR : integer := 9;
+   --     Output of TimingTrigMux
+   --  (0) : Dest0
+   --  (1) : Dest1
+   --  (2) : Dest2
+   --  output triggers
+   --  trigRtmMod
+   --  trigRtmSssb
+   --  trigRtmFpga
+   signal stdbyTrig       : sl;
+   signal accelTrig       : sl;
+   
    signal trigInput     : slv(19 downto 0);
-   signal s_trigPulse   : slv(9 downto 0);
-   signal s_trigStrobe  : slv(9 downto 0);
-   signal s_trigIndex   : slv(9 downto 0);
+   signal s_trigPulse   : sl;
+   signal s_trigStrobe  : sl;
+   signal s_trigIndex   : sl;
    signal s_trigMode    : slv(1 downto 0);
-   signal s_trigDaqMux  : sl;
-   signal trigDaqMux      : sl;
    signal trigRtmMod      : sl;
    signal trigRtmSssb     : sl;
    signal trigRtmFpga     : sl;
@@ -274,23 +268,11 @@ architecture mapping of AppCore is
    signal clk91 , rst91 , lck91  : sl;
    signal clk119, rst119, lck119 : sl;
 
-   constant T_LLRF_HXR_STB : integer := 0;
-   constant T_LLRF_HXR_ACC : integer := 1;
-   constant T_LLRF_SXR_STB : integer := 2;
-   constant T_LLRF_SXR_ACC : integer := 3;
-   constant T_MOD_HXR_STB  : integer := 4;
-   constant T_MOD_HXR_ACC  : integer := 5;
-   constant T_MOD_SXR_STB  : integer := 6;
-   constant T_MOD_SXR_ACC  : integer := 7;
-   constant T_RTM_HXR_STB  : integer := 8;
-   constant T_RTM_HXR_ACC  : integer := 9;
-   constant T_RTM_SXR_STB  : integer := 10;
-   constant T_RTM_SXR_ACC  : integer := 11;
-   constant T_SSB_HXR_STB  : integer := 12;
-   constant T_SSB_HXR_ACC  : integer := 13;
-   constant T_SSB_SXR_STB  : integer := 14;
-   constant T_SSB_SXR_ACC  : integer := 15;
-   constant T_NCHANNELS    : integer := 16;
+   constant T_FEEDBACK     : integer := 0;
+   constant T_RTM          : integer := 1;
+   constant T_MOD          : integer := 2;
+   constant T_SSSB         : integer := 3;
+   constant T_NCHANNELS    : integer := 4;
 
    signal appTrigConfig     : EvrV2TriggerConfigArray(T_NCHANNELS-1 downto 0);
    signal appTrigConfigS    : EvrV2TriggerConfigArray(T_NCHANNELS-1 downto 0);
@@ -347,13 +329,18 @@ begin
          mAxiReadMasters     => axilReadMasters,
          mAxiReadSlaves      => axilReadSlaves);
 
+
+   accelTrig     <= timingTrig.trigPulse(0) or
+                    timingTrig.trigPulse(2) or
+                    timingTrig.trigPulse(4);
+   stdbyTrig     <= timingTrig.trigPulse(1) or
+                    timingTrig.trigPulse(3) or
+                    timingTrig.trigPulse(5);
+
    --------------------
    -- LCLS ACCEL/STBY Trigger MUX
    --------------------
-   trigInput <= timingTrig.trigPulse(7 downto 4) & appTrig;
-   
-   GEN_TRIG_MUX : for i in 7 downto 0 generate
-      U_TimingTrigMux: entity xil_defaultlib.TimingTrigMux
+   U_TimingTrigMux: entity xil_defaultlib.TimingTrigMux
       generic map (
          TPD_G => TPD_G)
       port map (
@@ -361,17 +348,33 @@ begin
          recRst         => timingRst,
          mode_i         => s_trigMode,
          strobe_i       => timingBus.strobe,
-         trig_i         => trigInput((2*i+1) downto 2*i),
-         trig_o         => s_trigPulse(i),
-         trigStrobe_o   => s_trigStrobe(i),
-         trigIndex_o    => s_trigIndex(i));
-   end generate GEN_TRIG_MUX;
+         trig_i(0)      => accelTrig,
+         trig_i(1)      => stdbyTrig,
+         trig_o         => s_trigPulse,
+         trigStrobe_o   => s_trigStrobe,
+         trigIndex_o    => s_trigIndex );
 
-   s_trigDaqMux <= s_trigPulse(T_DAQMUX_HXR) or s_trigPulse(T_DAQMUX_SXR);
-   trigRtmMod  <= s_trigPulse(2) or s_trigPulse(3);
-   trigRtmFpga <= s_trigPulse(4) or s_trigPulse(5);
-   trigRtmSssb <= s_trigPulse(6) or s_trigPulse(7);
-   
+   trigRtmFpga   <= appTrig(T_RTM);
+
+   U_TrigRtmMod : entity xil_defaultlib.TrigRateSuppressor
+     generic map (
+       TPD_G          => TPD_G,
+       MIN_INTERVAL_G => ite((APP_TIMING_MODE_C=1 or APP_TIMING_MODE_C=3),833000,1300000) ) -- 7 ms
+     port map (
+       clk            => timingClk,
+       rst            => timingRst,
+       trig_i         => appTrig(T_MOD),
+       trig_o         => trigRtmMod );
+
+   U_TrigRtmSssb : entity xil_defaultlib.TrigRateSuppressor
+     generic map (
+       TPD_G          => TPD_G,
+       MIN_INTERVAL_G => ite(APP_TIMING_MODE_C=1 or APP_TIMING_MODE_C=3,833000,1300000) ) -- 7 ms
+     port map (
+       clk            => timingClk,
+       rst            => timingRst,
+       trig_i         => appTrig(T_SSSB),
+       trig_o         => trigRtmSssb );
 
 
 --   ----------------
@@ -413,7 +416,7 @@ begin
             TPD_G => TPD_G)
          port map (
             clk     => jesdClk(i),
-            dataIn  => s_trigDaqMux,
+            dataIn  => timingTrig.trigPulse(6),
             dataOut => trigHw(i));
    end generate;
 
@@ -423,11 +426,13 @@ begin
    -----------------------
    U_TimeSlot : entity xil_defaultlib.AppTimeSlot
      generic map (
-       MODE_1080HZ_G    => false )
+       MODE_1080HZ_G    => MODE_1080HZ_C,
+       MODE_DEST_G      => MODE_DEST_C,
+       DEST_CHAN_G      => DEST_CHAN_C )
      port map (
        clk        => timingClk,
        rst        => timingRst,
-       trig       => timingTrig.trigPulse(8),
+       trig       => s_trigPulse,
        message    => timingMessage,
        timeStamp  => trigTimestamp,
        timeSlot   => trigTimeslot );
@@ -438,8 +443,7 @@ begin
    U_SysGen : entity xil_defaultlib.AppLlrfCore
       generic map (
          TPD_G                => TPD_G,
-         AXI_BASE_ADDR_G      => AXI_CONFIG_C(SYSGEN_INDEX_C).baseAddr,
-         NUM_OF_TRIG_PULSES_G => s_trigPulse'length )
+         AXI_BASE_ADDR_G      => AXI_CONFIG_C(SYSGEN_INDEX_C).baseAddr )
       port map(
          -- JESD Interface
          jesdClk     => jesdClk,
@@ -460,13 +464,14 @@ begin
          rfSwitch       => s_fpgaInterlock,
          timingClk      => timingClk,
          timingRst      => timingRst,
-         trigPulse      => timingTrig.trigPulse(8), -- clock domain?
+         trigPulse      => appTrig(T_FEEDBACK),
          timeslot       => trigTimeslot,
          timestamp      => trigTimestamp,
          dmod           => timingTrig.dmod(191 downto 0),
 	 bsa            => timingTrig.bsa(127 downto 0),
          trigDaqOut     => open,
          trigMode       => s_trigMode,
+         trigIndex      => s_trigIndex,
          -- DAC SigGen
          dacSigCtrl     => dacSigCtrl,
          dacSigStatus   => dacSigStatus,
@@ -498,7 +503,7 @@ begin
 
    end generate;
 
-   GEN_LCLS_II : if APP_TIMING_MODE_C = 2 generate
+   GEN_LCLS_II : if APP_TIMING_MODE_C /= 1 generate
      timingMessage <= timingBus.message;
    end generate;
 
@@ -527,7 +532,7 @@ begin
      port map    ( rst           => diagnRst,
                    -- Write Ports (wr_clk domain)
                    wr_clk        => timingClk,
-                   wr_en         => s_trigStrobe(0),
+                   wr_en         => s_trigStrobe,
                    din           => timingMessageSlv,
                    -- Read Ports (rd_clk domain)
                    rd_clk        => diagnClk,
@@ -549,10 +554,10 @@ begin
        FB_BUFG_G          => true,
        NUM_CLOCKS_G       => 1,
        BANDWIDTH_G        => "OPTIMIZED",
-       CLKIN_PERIOD_G     => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,8.403,5.385),
-       DIVCLK_DIVIDE_G    => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,1    ,5),
-       CLKFBOUT_MULT_F_G  => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,10.0 ,31.50),
-       CLKOUT0_DIVIDE_F_G => ite(APP_TIMING_MODE_C=1 or GEN_APP_TIMING_C,70.0 ,70.0),
+       CLKIN_PERIOD_G     => ite(APP_TIMING_MODE_C=1 or APP_TIMING_MODE_C=3,8.403,5.385),
+       DIVCLK_DIVIDE_G    => ite(APP_TIMING_MODE_C=1 or APP_TIMING_MODE_C=3,1    ,5),
+       CLKFBOUT_MULT_F_G  => ite(APP_TIMING_MODE_C=1 or APP_TIMING_MODE_C=3,10.0 ,31.50),
+       CLKOUT0_DIVIDE_F_G => ite(APP_TIMING_MODE_C=1 or APP_TIMING_MODE_C=3,70.0 ,70.0),
        CLKOUT0_PHASE_G    => 0.0,
        CLKOUT0_RST_HOLD_G => 32
        )
@@ -588,9 +593,9 @@ begin
          jesdSysRef      => jesdSysRef(0),
          jesdRxSync      => jesdRxSync(0),
          -- DAC Interface (jesdClk domain)
-         dacValues(0)    => s_dacLs(0)(T_NCHANNELS-1 downto 0),
-         dacValues(1)    => s_dacLs(1)(T_NCHANNELS-1 downto 0),
-         dacValues(2)    => s_dacLs(2)(T_NCHANNELS-1 downto 0),
+         dacValues(0)    => s_dacLs(0),
+         dacValues(1)    => s_dacLs(1),
+         dacValues(2)    => s_dacLs(2),
          -- AXI-Lite Interface
          axilClk         => axilClk,
          axilRst         => axilRst,
@@ -817,7 +822,7 @@ begin
    freezeHw <= (others => '0');
 
 
-   GEN_APP_TIMING_CLK : if GEN_APP_TIMING_C generate
+   GEN_APP_TIMING_CLK : if APP_TIMING_MODE_C=3 generate
      --
      -- Clock managers for synthesizing 119 MHz from 186 MHz timingClk
      --
@@ -878,7 +883,7 @@ begin
        -- configuration
        triggerConfig   => appTrigConfig );
 
-   GEN_TRIG : for i in T_NCHANNELS-1 downto 0 generate
+   GEN_TRIG : for i in appTrigConfig'range generate
 
      appTrigConfigSlv(i) <= toSlv(appTrigConfig(i));
      appTrigConfigS  (i) <= toTriggerConfig(appTrigConfigSlvS(i));
@@ -892,14 +897,14 @@ begin
 
      U_Trigger : entity lcls_timing_core.EvrV2Trigger
        generic map (
-         CHANNELS_C   => 4,
+         CHANNELS_C   => 1,
          TRIG_DEPTH_C => 0 ) -- no FIFO pipeline
        port map (
          clk        => timingClk,
          rst        => timingRst,
          config     => appTrigConfigS(i),
-         arm        => timingTrig.trigPulse(3 downto 0), -- HXR/SXR x ACC/STB
-         fire       => timingTrig.trigPulse(8),
+         arm(0)     => s_trigPulse,
+         fire       => s_trigPulse,
          trigstate  => appTrig       (i) );
    end generate GEN_TRIG;
    
