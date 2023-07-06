@@ -209,6 +209,7 @@ architecture mapping of AppCore is
    --  trigRtmFpga
    signal stdbyTrig       : sl;
    signal accelTrig       : sl;
+   signal strobe_360Hz    : sl;
    
    signal trigInput     : slv(19 downto 0);
    signal s_trigPulse   : sl;
@@ -336,7 +337,9 @@ begin
    stdbyTrig     <= timingTrig.trigPulse(1) or
                     timingTrig.trigPulse(3) or
                     timingTrig.trigPulse(5);
-
+   strobe_360Hz  <= timingBus.strobe when (APP_TIMING_MODE_C /= 2) else
+                    (timingBus.strobe and timingBus.message.acRates(0));
+   
    --------------------
    -- LCLS ACCEL/STBY Trigger MUX
    --------------------
@@ -347,7 +350,7 @@ begin
          recClk         => timingClk,
          recRst         => timingRst,
          mode_i         => s_trigMode,
-         strobe_i       => timingBus.strobe,
+         strobe_i       => strobe_360Hz,  -- reset for new trigger
          trig_i(0)      => accelTrig,
          trig_i(1)      => stdbyTrig,
          trig_o         => s_trigPulse,
