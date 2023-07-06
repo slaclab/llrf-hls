@@ -476,7 +476,7 @@ begin
        pulseOutQ              => qSigGenFb,
        modeOut                => trigMode,
 --       modeIn                 => trigIndex,
-       faultIn                => faultIn,
+--       faultIn                => faultIn,
        axilClk                => axiClk,
        axilRst                => axiRst,
        axilReadMaster         => readMaster(MODEL_INDEX_C),
