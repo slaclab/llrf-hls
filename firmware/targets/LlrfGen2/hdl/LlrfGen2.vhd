@@ -332,11 +332,11 @@ begin
       generic map (
          TPD_G           => TPD_G,
          BUILD_INFO_G    => BUILD_INFO_G,
-         DISABLE_BSA_G   => false,         -- true = doesn't build the BSA engine
+         DISABLE_BSA_G   => true,         -- true = doesn't build the BSA engine
          DISABLE_BLD_G   => true,         -- true = doesn't build the BLD engine
          DISABLE_MPS_G   => true,         -- true = doesn't build MPS engine
          RTM_ETH_G       => false,        -- false = 10GbE over backplane
-         CORE_TRIGGERS_G => 10,
+         CORE_TRIGGERS_G => 8,
          AXIL_RINGB_G    => false,        -- false = no AxiLiteRingBuffer from TimingCore
          CLKSEL_MODE_G   => "LCLSI",
          APP_TYPE_G      => APP_NULL_TYPE_C)  -- Configured by application (refer to AmcCarrierPkg for list of all application types

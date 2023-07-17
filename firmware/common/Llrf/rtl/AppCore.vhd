@@ -195,7 +195,7 @@ architecture mapping of AppCore is
    --  (4) : accelTrig  Dest2
    --  (5) : stndbyTrig Dest2
    --  (6) : DaqMux
-   --  (7) : triggers processing [like 120 Hz ] [timeslot update, diagnbus ]
+   --  (7) : accelTrig qualifier [360 Hz alignment]
    --  s_trigPulse assignments
    --     Output of TimingTrigMux
    --  (0) : Dest0
@@ -207,6 +207,7 @@ architecture mapping of AppCore is
    --  trigRtmFpga
    signal stdbyTrig       : sl;
    signal accelTrig       : sl;
+   signal destTrig        : slv(2 downto 0);
    signal strobe_360Hz    : sl;
    
    signal trigInput     : slv(19 downto 0);
@@ -329,12 +330,16 @@ begin
          mAxiReadSlaves      => axilReadSlaves);
 
 
-   accelTrig     <= timingTrig.trigPulse(0) or
-                    timingTrig.trigPulse(2) or
-                    timingTrig.trigPulse(4);
+   accelTrig     <= (timingTrig.trigPulse(0) or
+                     timingTrig.trigPulse(2) or
+                     timingTrig.trigPulse(4)) and
+                    timingTrig.trigPulse(7);
    stdbyTrig     <= timingTrig.trigPulse(1) or
                     timingTrig.trigPulse(3) or
                     timingTrig.trigPulse(5);
+   destTrig      <= (timingTrig.trigPulse(4) or timingTrig.trigPulse(5)) &
+                    (timingTrig.trigPulse(2) or timingTrig.trigPulse(3)) &
+                    (timingTrig.trigPulse(0) or timingTrig.trigPulse(1));
    strobe_360Hz  <= timingBus.strobe when (APP_TIMING_MODE_C /= 2) else
                     (timingBus.strobe and timingBus.message.acRates(0));
    
@@ -427,13 +432,13 @@ begin
    -----------------------
    U_TimeSlot : entity xil_defaultlib.AppTimeSlot
      generic map (
-       MODE_1080HZ_G    => MODE_1080HZ_C,
        MODE_DEST_G      => MODE_DEST_C,
        DEST_CHAN_G      => DEST_CHAN_C )
      port map (
        clk        => timingClk,
        rst        => timingRst,
        trig       => s_trigPulse,
+       dest       => destTrig,
        message    => timingMessage,
        timeStamp  => trigTimestamp,
        timeSlot   => trigTimeslot );
@@ -517,7 +522,7 @@ begin
        timingRst      => timingRst,
        timingStrobe   => timingBus.strobe,
        timingMessage  => timingMessage,
-       trigger        => timingTrig.trigPulse(8),
+       trigger        => s_trigPulse,
        -- diagnosticClk domain
        diagnosticClk  => diagnClk,
        diagnosticRst  => diagnRst,

@@ -191,6 +191,12 @@ architecture mapping of AppLlrfCore is
 
    signal timestampIn : slv(191 downto 0) := (others => '0');
 
+   signal fbClk, fbRst : sl;
+   signal fbReadMaster  : AxiLiteReadMasterType;
+   signal fbReadSlave   : AxiLiteReadSlaveType;
+   signal fbWriteMaster : AxiLiteWriteMasterType;
+   signal fbWriteSlave  : AxiLiteWriteSlaveType;
+   
    constant DEBUG_C : boolean := false;
 
    component ila_0
@@ -453,6 +459,39 @@ begin
    dacSigCtrl(0).start <= (others => '0');
    dacSigCtrl(1).start <= (others => trigPulseSync);
 
+   -------------------------------------------
+   --  Lower clock rate for 360 Hz processing
+   -------------------------------------------
+   U_FB_CLK : entity surf.ClockManagerUltraScale
+     generic map (
+       TYPE_G             => "PLL",
+       CLKIN_PERIOD_G     => 6.400,
+       NUM_CLOCKS_G       => 1,
+       DIVCLK_DIVIDE_G    => 1,
+       CLKFBOUT_MULT_G    => 6,
+       CLKOUT0_DIVIDE_G   => 12)
+     port map (
+       clkIn           => axiClk,
+       rstIn           => axiRst,
+       clkOut(0)       => fbClk,
+       rstOut(0)       => fbRst,
+       locked          => open);
+
+   U_FB_AXIL : entity surf.AxiLiteAsync
+     port map (
+       sAxiClk                => axiClk,
+       sAxiClkRst             => axiRst,
+       sAxiReadMaster         => readMaster(MODEL_INDEX_C),
+       sAxiReadSlave          => readSlave(MODEL_INDEX_C),
+       sAxiWriteMaster        => writeMaster(MODEL_INDEX_C),
+       sAxiWriteSlave         => writeSlave(MODEL_INDEX_C),
+       mAxiClk                => fbClk,
+       mAxiClkRst             => fbRst,
+       mAxiReadMaster         => fbReadMaster,
+       mAxiReadSlave          => fbReadSlave,
+       mAxiWriteMaster        => fbWriteMaster,
+       mAxiWriteSlave         => fbWriteSlave);
+     
    U_MODEL : entity llrf_core.LlrfFeedbackWrapper
      generic map (
        TPD_G                => TPD_G,
@@ -477,12 +516,12 @@ begin
        modeOut                => trigMode,
 --       modeIn                 => trigIndex,
 --       faultIn                => faultIn,
-       axilClk                => axiClk,
-       axilRst                => axiRst,
-       axilReadMaster         => readMaster(MODEL_INDEX_C),
-       axilReadSlave          => readSlave(MODEL_INDEX_C),
-       axilWriteMaster        => writeMaster(MODEL_INDEX_C),
-       axilWriteSlave         => writeSlave(MODEL_INDEX_C),
+       axilClk                => fbClk,
+       axilRst                => fbRst,
+       axilReadMaster         => fbReadMaster,
+       axilReadSlave          => fbReadSlave,
+       axilWriteMaster        => fbWriteMaster,
+       axilWriteSlave         => fbWriteSlave,
        --  Diagnostic bus interface?
        -- diagnClk       => diagnClk,
        -- diagnRst       => diagnRst,

@@ -25,23 +25,24 @@ use surf.StdRtlPkg.all;
 library lcls_timing_core;
 use lcls_timing_core.TimingPkg.all;
 
-library xil_defaultlib;
-use xil_defaultlib.AppOpts.all;
-
 library unisim;
 use unisim.vcomponents.all;
 
 entity AppTimeSlot is
    generic (
-     MODE_1080HZ_G : boolean := false;
-     MODE_DEST_G   : boolean := false;
-     DEST_CHAN_G   : NaturalArray := ( 0 => 0 )
+     MODE_DEST_G      : string := "TRIGGER";
+     --  "TRIGGER" : get destination from dest signal
+     --  "MESSAGE" : get destination from message dest field
+     --  "CONTROL" : get destination from message control0 field
+     --  "NONE"    : no destination dependence
+     DEST_CHAN_G      : NaturalArray := ( 0 => 0 );
       );
    port (
       -- Clocks and resets
       clk                 : in    sl;
       rst                 : in    sl;
       trig                : in    sl;
+      dest                : in    slv(2 downto 0) := "000";
       message             : in    TimingMessageType;
       timeSlot            : out   slv(4 downto 0);
       timeStamp           : out   slv(63 downto 0) );
@@ -71,11 +72,14 @@ begin
     if trig = '1' then
       v.timeStamp := message.timestamp;
 
-      if MODE_1080HZ_G then
+      if MODE_DEST_G == "CONTROL" then
         -- UED
         v.timeSlot  := message.control(0)(4 downto 0);
-      elsif MODE_DEST_G then
+      elsif MODE_DEST_G == "MESSAGE" then
         v.timeSlot  := toSlv(DEST_CHAN_G(conv_integer(message.beamRequest(7 downto 4)))+
+                             conv_integer(message.acTimeSlot),5);
+      elsif MODE_DEST_G == "TRIGGER" then
+        v.timeSlot  := toSlv(DEST_CHAN_G(conv_integer(dest))+
                              conv_integer(message.acTimeSlot),5);
       else
         -- LCLS-I/LCLS-II
