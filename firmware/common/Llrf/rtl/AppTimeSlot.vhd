@@ -35,7 +35,7 @@ entity AppTimeSlot is
      --  "MESSAGE" : get destination from message dest field
      --  "CONTROL" : get destination from message control0 field
      --  "NONE"    : no destination dependence
-     DEST_CHAN_G      : NaturalArray := ( 0 => 0 );
+     DEST_CHAN_G      : NaturalArray := ( 0 => 0 )
       );
    port (
       -- Clocks and resets
@@ -64,7 +64,7 @@ architecture mapping of AppTimeSlot is
   
 begin
 
-  comb : process ( rst, r, trig, message ) is
+  comb : process ( rst, r, trig, dest, message ) is
     variable v : RegType;
   begin
     v := r;
@@ -72,13 +72,13 @@ begin
     if trig = '1' then
       v.timeStamp := message.timestamp;
 
-      if MODE_DEST_G == "CONTROL" then
+      if MODE_DEST_G = "CONTROL" then
         -- UED
         v.timeSlot  := message.control(0)(4 downto 0);
-      elsif MODE_DEST_G == "MESSAGE" then
+      elsif MODE_DEST_G = "MESSAGE" then
         v.timeSlot  := toSlv(DEST_CHAN_G(conv_integer(message.beamRequest(7 downto 4)))+
                              conv_integer(message.acTimeSlot),5);
-      elsif MODE_DEST_G == "TRIGGER" then
+      elsif MODE_DEST_G = "TRIGGER" then
         v.timeSlot  := toSlv(DEST_CHAN_G(conv_integer(dest))+
                              conv_integer(message.acTimeSlot),5);
       else

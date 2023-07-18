@@ -207,6 +207,7 @@ architecture mapping of AppCore is
    --  trigRtmFpga
    signal stdbyTrig       : sl;
    signal accelTrig       : sl;
+   signal daqTrig         : sl;  -- trigger for DaqMux
    signal destTrig        : slv(2 downto 0);
    signal strobe_360Hz    : sl;
    
@@ -415,6 +416,8 @@ begin
 --            dout => s_wfData(i));
 --   end generate GEN_WAVEFORMS;
 
+   daqTrig <= timingTrig.trigPulse(6) and appTrig(T_FEEDBACK);
+   
    U_SYNC_TRIG : for i in 1 downto 0 generate
 
       U_SYNC_ONE_SHOT  : entity surf.SynchronizerOneShot
@@ -422,7 +425,7 @@ begin
             TPD_G => TPD_G)
          port map (
             clk     => jesdClk(i),
-            dataIn  => timingTrig.trigPulse(6),
+            dataIn  => daqTrig,
             dataOut => trigHw(i));
    end generate;
 
