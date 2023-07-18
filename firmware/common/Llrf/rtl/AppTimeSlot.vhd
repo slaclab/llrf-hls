@@ -64,6 +64,10 @@ architecture mapping of AppTimeSlot is
   
 begin
 
+  assert (MODE_DEST_G = "CONTROL" or MODE_DEST_G = "MESSAGE" or
+          MODE_DEST_G = "TRIGGER" or MODE_DEST_G = "NONE")
+    report "AppTimeSlot: MODE_DEST_G must be CONTROL,MESSAGE,TRIGGER,or NONE" severity failure;
+  
   comb : process ( rst, r, trig, dest, message ) is
     variable v : RegType;
   begin
@@ -79,8 +83,12 @@ begin
         v.timeSlot  := toSlv(DEST_CHAN_G(conv_integer(message.beamRequest(7 downto 4)))+
                              conv_integer(message.acTimeSlot),5);
       elsif MODE_DEST_G = "TRIGGER" then
-        v.timeSlot  := toSlv(DEST_CHAN_G(conv_integer(dest))+
-                             conv_integer(message.acTimeSlot),5);
+        for i in 0 to 2 loop
+          if dest(i) = '1' then
+            v.timeSlot  := toSlv(DEST_CHAN_G(i)+
+                                 conv_integer(message.acTimeSlot),5);
+          end if;
+        end loop;
       else
         -- LCLS-I/LCLS-II
         v.timeSlot  := "00" & message.acTimeSlot;
