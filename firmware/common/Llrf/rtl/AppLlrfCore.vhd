@@ -196,6 +196,8 @@ architecture mapping of AppLlrfCore is
    signal fbReadSlave   : AxiLiteReadSlaveType;
    signal fbWriteMaster : AxiLiteWriteMasterType;
    signal fbWriteSlave  : AxiLiteWriteSlaveType;
+
+   constant SIM_DBUS_C : boolean := false;
    
    constant DEBUG_C : boolean := false;
 
@@ -523,12 +525,12 @@ begin
        axilWriteMaster        => fbWriteMaster,
        axilWriteSlave         => fbWriteSlave,
        --  Diagnostic bus interface?
-       -- diagnClk       => diagnClk,
-       -- diagnRst       => diagnRst,
-       -- diagnData      => diagn,
-       -- diagnFixed     => diagnFixed,
-       -- diagnSevr      => diagnSevr,
-       -- diagnStrobe    => diagnStrobe,
+       diagnClk       => diagnClk,
+       diagnRst       => diagnRst,
+       diagnData      => diagn,
+       diagnFixed     => diagnFixed,
+       diagnSevr      => diagnSevr,
+       diagnStrobe    => diagnStrobe,
        --
        streamClk      => streamClk,
        streamRst      => streamRst,
@@ -536,30 +538,32 @@ begin
        streamSlave    => streamSlave);
 
    -- Fake diagnostic data
-   diagnClk <= axiClk;
-   diagnRst <= axiRst;
-   diagn     (0) <= timestamp(31 downto 0);
-   diagnFixed(0) <= '1';
-   diagn     (1) <= timestamp(63 downto 32);
-   diagnFixed(1) <= '1';
-   diagn     (2) <= toSlv(0,27) & timeslot;
-   diagnFixed(2) <= '1';
-   GEN_DIAG : for i in 3 to 31 generate
-     diagn     (i) <= toSlv(i,32);
-     diagnFixed(i) <= '0';
-   end generate;
-   diagnSevr <= (others=>"00");
-
-   U_Strobe : entity surf.OneShot
-     generic map (
-       IN_POLARITY_G => '0',
-       PULSE_BIT_WIDTH_G => 1 )
-     port map (
-       clk          => timingClk,
-       rst          => timingRst,
-       trigIn       => trigPulse,
-       pulseWidth(0)=> '1',
-       pulseOut     => diagnStrobe );
+   GEN_DBUS_SIM : if SIM_DBUS_C generate
+     diagnClk <= axiClk;
+     diagnRst <= axiRst;
+     diagn     (0) <= timestamp(31 downto 0);
+     diagnFixed(0) <= '1';
+     diagn     (1) <= timestamp(63 downto 32);
+     diagnFixed(1) <= '1';
+     diagn     (2) <= toSlv(0,27) & timeslot;
+     diagnFixed(2) <= '1';
+     GEN_DIAG : for i in 3 to 31 generate
+       diagn     (i) <= toSlv(i,32);
+       diagnFixed(i) <= '0';
+     end generate;
+     diagnSevr <= (others=>"00");
+   
+     U_Strobe : entity surf.OneShot
+       generic map (
+         IN_POLARITY_G => '0',
+         PULSE_BIT_WIDTH_G => 1 )
+       port map (
+         clk          => timingClk,
+         rst          => timingRst,
+         trigIn       => trigPulse,
+         pulseWidth(0)=> '1',
+         pulseOut     => diagnStrobe );
+   end generate GEN_DBUS_SIM;
      
    -- Need to translate debug waveforms to jesdClk(0) domain
    GEN_DAQ : for i in 7 downto 0 generate
