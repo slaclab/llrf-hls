@@ -525,11 +525,11 @@ begin
        axilWriteMaster        => fbWriteMaster,
        axilWriteSlave         => fbWriteSlave,
        --  Diagnostic bus interface?
-       diagnClk       => diagnClk,
-       diagnRst       => diagnRst,
-       diagnData      => diagn,
-       diagnFixed     => diagnFixed,
-       diagnSevr      => diagnSevr,
+       diagnClk       => axiClk,
+       diagnRst       => axiRst,
+       diagnData      => diagn     (30 downto 0),
+       diagnFixed     => diagnFixed(30 downto 0),
+       diagnSevr      => diagnSevr (30 downto 0),
        diagnStrobe    => diagnStrobe,
        --
        streamClk      => streamClk,
@@ -537,10 +537,11 @@ begin
        streamMaster   => streamMaster,
        streamSlave    => streamSlave);
 
+   diagnClk <= axiClk;
+   diagnRst <= axiRst;
+
    -- Fake diagnostic data
    GEN_DBUS_SIM : if SIM_DBUS_C generate
-     diagnClk <= axiClk;
-     diagnRst <= axiRst;
      diagn     (0) <= timestamp(31 downto 0);
      diagnFixed(0) <= '1';
      diagn     (1) <= timestamp(63 downto 32);
