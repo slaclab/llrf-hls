@@ -93,6 +93,8 @@ entity AppCore is
       -- Top Level Interface
       ----------------------
       -- Timing Interface (timingClk domain)
+      recTimingClk        : in    sl;
+      recTimingRst        : in    sl;
       timingClk           : in    sl;
       timingRst           : in    sl;
       timingBus           : in    TimingBusType;
@@ -851,8 +853,8 @@ begin
          CLKOUT0_RST_HOLD_G => 32
          )
        port map (
-         clkIn     => timingClk,
-         rstIn     => timingRst,
+         clkIn     => recTimingClk,
+         rstIn     => recTimingRst,
          clkOut(0) => clk91,
          rstOut(0) => rst91,
          locked    => lck91 );
