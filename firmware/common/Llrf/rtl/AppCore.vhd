@@ -214,7 +214,7 @@ architecture mapping of AppCore is
    signal strobe_360Hz    : sl;
    
    signal trigInput     : slv(19 downto 0);
-   signal s_trigPulse   : sl;
+--   signal s_trigPulse   : sl;
    signal s_trigStrobe  : sl;
    signal s_trigIndex   : sl;
    signal s_trigMode    : slv(1 downto 0);
@@ -335,16 +335,15 @@ begin
 
    accelTrig     <= (timingTrig.trigPulse(0) or
                      timingTrig.trigPulse(2) or
-                     timingTrig.trigPulse(4)) and
-                    timingTrig.trigPulse(7);
+                     timingTrig.trigPulse(4)); -- and
+--                    timingTrig.trigPulse(7);
    stdbyTrig     <= timingTrig.trigPulse(1) or
                     timingTrig.trigPulse(3) or
                     timingTrig.trigPulse(5);
    destTrig      <= (timingTrig.trigPulse(4) or timingTrig.trigPulse(5)) &
                     (timingTrig.trigPulse(2) or timingTrig.trigPulse(3)) &
                     (timingTrig.trigPulse(0) or timingTrig.trigPulse(1));
-   strobe_360Hz  <= timingBus.strobe when (APP_TIMING_MODE_C /= 2) else
-                    (timingBus.strobe and timingBus.message.acRates(0));
+   strobe_360Hz  <= timingTrig.trigPulse(7);
    
    --------------------
    -- LCLS ACCEL/STBY Trigger MUX
@@ -359,7 +358,7 @@ begin
          strobe_i       => strobe_360Hz,  -- reset for new trigger
          trig_i(0)      => accelTrig,
          trig_i(1)      => stdbyTrig,
-         trig_o         => s_trigPulse,
+--         trig_o         => s_trigPulse,
          trigStrobe_o   => s_trigStrobe,
          trigIndex_o    => s_trigIndex );
 
@@ -442,7 +441,7 @@ begin
      port map (
        clk        => timingClk,
        rst        => timingRst,
-       trig       => s_trigPulse,
+       trig       => s_trigStrobe,
        dest       => destTrig,
        message    => timingMessage,
        timeStamp  => trigTimestamp,
@@ -527,7 +526,7 @@ begin
        timingRst      => timingRst,
        timingStrobe   => timingBus.strobe,
        timingMessage  => timingMessage,
-       trigger        => s_trigPulse,
+       trigger        => strobe_360Hz,
        -- diagnosticClk domain
        diagnosticClk  => diagnClk,
        diagnosticRst  => diagnRst,
@@ -535,22 +534,6 @@ begin
        diagnosticBusO => diagnosticBus );
                 
    timingMessageSlv <= toSlv(timingMessage);
-
-   V2FIFO : entity surf.FifoAsync
-     generic map ( FWFT_EN_G     => true,
-                   DATA_WIDTH_G  => TIMING_MESSAGE_BITS_C,
-                   ADDR_WIDTH_G  => 4 )
-     port map    ( rst           => diagnRst,
-                   -- Write Ports (wr_clk domain)
-                   wr_clk        => timingClk,
-                   wr_en         => s_trigStrobe,
-                   din           => timingMessageSlv,
-                   -- Read Ports (rd_clk domain)
-                   rd_clk        => diagnClk,
-                   rd_en         => diagnBus.strobe,
-                   dout          => timingMessageSlvO );
-
-   diagnBus.timingMessage <= toTimingMessageType(timingMessageSlvO);
 
    diagnosticClk <= diagnClk;
    diagnosticRst <= diagnRst;
@@ -761,7 +744,7 @@ begin
          stndbyTrig      => trigRtmMod,
          accelTrig       => trigRtmSssb,
          dataTrig        => trigRtmFpga,
-         timestamp       => trigTimestamp(63 downto 0),
+`<         timestamp       => trigTimestamp(63 downto 0),
 	 -- Fault Stauts
 	 faultOut        => fault,
          -- AXI-Lite Interface
@@ -914,8 +897,8 @@ begin
          clk        => timingClk,
          rst        => timingRst,
          config     => appTrigConfigS(i),
-         arm(0)     => s_trigPulse,
-         fire       => s_trigPulse,
+         arm(0)     => s_trigStrobe,
+         fire       => s_trigStrobe,
          trigstate  => appTrig       (i) );
    end generate GEN_TRIG;
    
