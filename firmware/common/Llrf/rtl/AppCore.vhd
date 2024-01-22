@@ -745,7 +745,7 @@ begin
          stndbyTrig      => trigRtmMod,
          accelTrig       => trigRtmSssb,
          dataTrig        => trigRtmFpga,
-`<         timestamp       => trigTimestamp(63 downto 0),
+         timestamp       => trigTimestamp(63 downto 0),
 	 -- Fault Stauts
 	 faultOut        => fault,
          -- AXI-Lite Interface
