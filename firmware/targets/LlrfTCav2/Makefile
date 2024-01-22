@@ -12,7 +12,8 @@ export USE_XVC_DEBUG = 1
 # PRJ_VERSION = 0x00000008  Add max(abs(beam volts)) to BSA stream
 # PRJ_VERSION = 0x00000009  Add RTM fault history buffers, fault stream to TDEST 0xC1
 # PRJ_VERSION = 0x00000010  Introduce LCLSII->LCLSI timing synthesis and diagnosticBus
-export PRJ_VERSION = 0x00000010
+# PRJ_VERSION = 0x00000011  Use 360Hz decoding as diagnostic bus trigger
+export PRJ_VERSION = 0x00000011
 
 ##########################################################################################
 # Applications must define if using advance AMC carrier build
