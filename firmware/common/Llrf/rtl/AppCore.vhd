@@ -335,15 +335,16 @@ begin
 
    accelTrig     <= (timingTrig.trigPulse(0) or
                      timingTrig.trigPulse(2) or
-                     timingTrig.trigPulse(4)); -- and
---                    timingTrig.trigPulse(7);
+                     timingTrig.trigPulse(4)) and
+                    timingTrig.trigPulse(7);
    stdbyTrig     <= timingTrig.trigPulse(1) or
                     timingTrig.trigPulse(3) or
                     timingTrig.trigPulse(5);
    destTrig      <= (timingTrig.trigPulse(4) or timingTrig.trigPulse(5)) &
                     (timingTrig.trigPulse(2) or timingTrig.trigPulse(3)) &
                     (timingTrig.trigPulse(0) or timingTrig.trigPulse(1));
-   strobe_360Hz  <= timingTrig.trigPulse(7);
+   strobe_360Hz  <= timingBus.strobe when (APP_TIMING_MODE_C /= 2) else
+                    (timingBus.strobe and timingBus.message.acRates(0));
    
    --------------------
    -- LCLS ACCEL/STBY Trigger MUX
