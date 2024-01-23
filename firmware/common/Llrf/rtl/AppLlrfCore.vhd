@@ -206,6 +206,8 @@ architecture mapping of AppLlrfCore is
             probe0 : in slv(255 downto 0) );
    end component;
 
+   constant SLOW_CLK_C : boolean := false;
+   
 begin
 
    GEN_DEBUG : if DEBUG_C generate
@@ -464,36 +466,47 @@ begin
    -------------------------------------------
    --  Lower clock rate for 360 Hz processing
    -------------------------------------------
-   U_FB_CLK : entity surf.ClockManagerUltraScale
-     generic map (
-       TYPE_G             => "PLL",
-       CLKIN_PERIOD_G     => 6.400,
-       NUM_CLOCKS_G       => 1,
-       DIVCLK_DIVIDE_G    => 1,
-       CLKFBOUT_MULT_G    => 6,
-       CLKOUT0_DIVIDE_G   => 12)
-     port map (
-       clkIn           => axiClk,
-       rstIn           => axiRst,
-       clkOut(0)       => fbClk,
-       rstOut(0)       => fbRst,
-       locked          => open);
+   SLOW_CLK_GEN : if SLOW_CLK_C generate
+     U_FB_CLK : entity surf.ClockManagerUltraScale
+       generic map (
+         TYPE_G             => "PLL",
+         CLKIN_PERIOD_G     => 6.400,
+         NUM_CLOCKS_G       => 1,
+         DIVCLK_DIVIDE_G    => 1,
+         CLKFBOUT_MULT_G    => 6,
+         CLKOUT0_DIVIDE_G   => 12)
+       port map (
+         clkIn           => axiClk,
+         rstIn           => axiRst,
+         clkOut(0)       => fbClk,
+         rstOut(0)       => fbRst,
+         locked          => open);
 
-   U_FB_AXIL : entity surf.AxiLiteAsync
-     port map (
-       sAxiClk                => axiClk,
-       sAxiClkRst             => axiRst,
-       sAxiReadMaster         => readMaster(MODEL_INDEX_C),
-       sAxiReadSlave          => readSlave(MODEL_INDEX_C),
-       sAxiWriteMaster        => writeMaster(MODEL_INDEX_C),
-       sAxiWriteSlave         => writeSlave(MODEL_INDEX_C),
-       mAxiClk                => fbClk,
-       mAxiClkRst             => fbRst,
-       mAxiReadMaster         => fbReadMaster,
-       mAxiReadSlave          => fbReadSlave,
-       mAxiWriteMaster        => fbWriteMaster,
-       mAxiWriteSlave         => fbWriteSlave);
-     
+     U_FB_AXIL : entity surf.AxiLiteAsync
+       port map (
+         sAxiClk                => axiClk,
+         sAxiClkRst             => axiRst,
+         sAxiReadMaster         => readMaster(MODEL_INDEX_C),
+         sAxiReadSlave          => readSlave(MODEL_INDEX_C),
+         sAxiWriteMaster        => writeMaster(MODEL_INDEX_C),
+         sAxiWriteSlave         => writeSlave(MODEL_INDEX_C),
+         mAxiClk                => fbClk,
+         mAxiClkRst             => fbRst,
+         mAxiReadMaster         => fbReadMaster,
+         mAxiReadSlave          => fbReadSlave,
+         mAxiWriteMaster        => fbWriteMaster,
+         mAxiWriteSlave         => fbWriteSlave);
+   end generate;
+
+   NO_SLOW_CLK_GEN : if not SLOW_CLK_C generate
+     fbClk                     <= axiClk;
+     fbRst                     <= axiRst;
+     fbReadMaster              <= readMaster (MODEL_INDEX_C);
+     fbWriteMaster             <= writeMaster(MODEL_INDEX_C);
+     readSlave (MODEL_INDEX_C) <= fbReadSlave;
+     writeSlave(MODEL_INDEX_C) <= fbWriteSlave;
+   end generate;
+   
    U_MODEL : entity llrf_core.LlrfFeedbackWrapper
      generic map (
        TPD_G                => TPD_G,
