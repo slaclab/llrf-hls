@@ -341,8 +341,7 @@ begin
    destTrig      <= (timingTrig.trigPulse(4) or timingTrig.trigPulse(5)) &
                     (timingTrig.trigPulse(2) or timingTrig.trigPulse(3)) &
                     (timingTrig.trigPulse(0) or timingTrig.trigPulse(1));
-   strobe_360Hz  <= timingBus.strobe when (APP_TIMING_MODE_C /= 2 or
-                                           timingBus.message.acRates/=0) else
+   strobe_360Hz  <= timingBus.strobe when (timingMessage.acRates/=0) else
                     '0';
    
    --------------------
