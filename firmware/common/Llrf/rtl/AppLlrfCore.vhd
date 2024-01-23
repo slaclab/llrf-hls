@@ -206,7 +206,7 @@ architecture mapping of AppLlrfCore is
             probe0 : in slv(255 downto 0) );
    end component;
 
-   constant SLOW_CLK_C : boolean := false;
+   constant SLOW_CLK_C : boolean := true;
    
 begin
 

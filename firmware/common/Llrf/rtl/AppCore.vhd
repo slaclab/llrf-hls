@@ -518,7 +518,7 @@ begin
 
    U_DiagnBus : entity xil_defaultlib.AppDiagnBus
      generic map (
-       FIFO_ADDR_WIDTH_G => 8 )  -- expect < 256 us delay in diagnBus
+       FIFO_ADDR_WIDTH_G => 10 )  -- expect < 256 us delay in diagnBus
      port map (
        -- timingClk domain
        timingClk      => timingClk,
