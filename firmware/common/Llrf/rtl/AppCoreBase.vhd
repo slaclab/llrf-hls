@@ -37,11 +37,12 @@ use lcls_timing_core.EvrV2Pkg.all;
 
 library xil_defaultlib;
 use xil_defaultlib.AppOpts.all;
+use xil_defaultlib.LlrfPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
 
-entity AppCore is
+entity AppCoreBase is
    generic (
       TPD_G              : time                    := 1 ns;
       SIM_SPEEDUP_G      : boolean                 := false;
@@ -157,9 +158,9 @@ entity AppCore is
       -- RTM's Clock Reference
       genClkP             : in    sl;
       genClkN             : in    sl);
-end AppCore;
+end AppCoreBase;
 
-architecture mapping of AppCore is
+architecture mapping of AppCoreBase is
 
    constant NUM_AXI_MASTERS_C : natural := 7;
 
@@ -299,7 +300,7 @@ begin
    dacValues(1,4) <= s_dacHs;
    dacValues(1,5) <= s_dacHs;
    dacValues(1,6) <= s_dacHs;
-
+   
    GEN_ADC_SIGNALS :
    for i in 5 downto 0 generate
       s_adcValues(0,i) <= adcValues(0,i);
@@ -685,7 +686,7 @@ begin
             jesdSysRef      => jesdSysRef(1),
             jesdRxSync      => jesdRxSync(1),
 
-            jesdTxSync(6 downto 0) => jesdTxSync(1),
+            jesdTxSync(6 downto 0) => jesdTxSync(1)(6 downto 0),
             jesdTxSync(9 downto 7) => open,
 
             -- DAC Interface (jesdClk domain)
