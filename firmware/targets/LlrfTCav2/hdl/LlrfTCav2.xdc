@@ -58,9 +58,9 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
 		 -group [get_clocks {recTimingClk}] \
-		 -group [get_clocks -of_objects [get_pins U_AppTop/U_AppCore/GEN_APP_TIMING_CLK.U_MMCM_119/MmcmGen.U_Mmcm/CLKOUT0]]
+		 -group [get_clocks -of_objects [get_pins U_AppTop/U_AppCore/U_BASE/GEN_APP_TIMING_CLK.U_MMCM_119/MmcmGen.U_Mmcm/CLKOUT0]]
 
-create_generated_clock -name clk119 [get_pins U_AppTop/U_AppCore/GEN_APP_TIMING_CLK.U_MMCM_119/MmcmGen.U_Mmcm/CLKOUT0]
+create_generated_clock -name clk119 [get_pins U_AppTop/U_AppCore/U_BASE/GEN_APP_TIMING_CLK.U_MMCM_119/MmcmGen.U_Mmcm/CLKOUT0]
 
 set_clock_groups -asynchronous -group [get_clocks {clk119}] -group [get_clocks {rtmAdcDataClk}]
 set_clock_groups -asynchronous -group [get_clocks {clk119}] -group [get_clocks {rtmAdcDataClkDiv2}]
