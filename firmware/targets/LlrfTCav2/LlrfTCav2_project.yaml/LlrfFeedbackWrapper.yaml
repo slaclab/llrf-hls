@@ -1,0 +1,60 @@
+##############################################################################
+## This file is part of 'SLAC Firmware Standard Library'.
+## It is subject to the license terms in the LICENSE.txt file found in the
+## top-level directory of this distribution and at:
+##    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+## No part of 'SLAC Firmware Standard Library', including this file,
+## may be copied, modified, propagated, or distributed except according to
+## the terms contained in the LICENSE.txt file.
+##############################################################################
+#schemaversion 3.0.0
+#once LlrfFeedbackWrapper.yaml
+#include LlrfHls.yaml
+#include LlrfWindow.yaml
+#include LlrfChannelIQ.yaml
+
+LlrfFeedbackWrapper: &LlrfFeedbackWrapper
+  description: "LLRF Feedback Wrapper"
+  class: MMIODev
+  configPrio: 1
+  size: 0x40000
+  #########
+  children:
+  #########
+    MODE_CONFIG:
+      class: IntField
+      at:
+        offset: 0x38000
+      sizeBits: 2
+      mode: RW
+      description: "MODE_CONFIG"
+    #########################################################
+    FREEZE_SW_WF:
+      class: IntField
+      at:
+        offset: 0x38004
+      sizeBits: 1
+      mode: RW
+      description: "FREEZE SW IQ WAVEFORM READOUT"
+    #########################################################
+    LlrfHls:
+      <<: *LlrfHls
+      at:
+        offset: 0x0000
+    #########################################################
+    FeedbackWindow:
+      <<: *LlrfChannelIQ
+      at:
+        offset: 0x4000
+        nelms:  3
+        stride: 0x4000
+      children:
+        waveformIQ:
+          mode: RW
+    #########################################################
+    IQWaveform:
+      <<: *LlrfChannelIQ
+      at:
+        offset: 0x10000
+        nelms:  10
+        stride: 0x4000

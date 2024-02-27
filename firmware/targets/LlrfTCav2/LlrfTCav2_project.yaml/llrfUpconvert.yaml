@@ -1,0 +1,191 @@
+##############################################################################
+## This file is part of 'SLAC Firmware Standard Library'.
+## It is subject to the license terms in the LICENSE.txt file found in the
+## top-level directory of this distribution and at:
+##    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+## No part of 'SLAC Firmware Standard Library', including this file,
+## may be copied, modified, propagated, or distributed except according to
+## the terms contained in the LICENSE.txt file.
+##############################################################################
+#schemaversion 3.0.0
+#once llrfUpconvert.yaml
+
+LlrfUpconvert: &LlrfUpconvert
+  description: "LLRF Upconvert Configuration/Status"
+  class: MMIODev
+  configPrio: 1
+  size: 0x1000
+  #########
+  children:
+  #########
+    #########################################################
+    ## Status registers
+    #########################################################
+    version:
+      class: IntField
+      at:
+        offset: 0x0
+      sizeBits: 32
+      mode: RO
+      description: "Version number"
+    #########################################################
+    referencePhase0:
+      class: IntField
+      at:
+        offset: 0x004
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Reference channel phase readback Fix_16_15"
+    #########################################################
+    referenceAmplitude0:
+      class: IntField
+      at:
+        offset: 0x006
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Reference channel amplitude readback Fix_16_15"
+    #########################################################
+    referencePhase1:
+      class: IntField
+      at:
+        offset: 0x008
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Reference channel phase readback Fix_16_15"
+    #########################################################
+    referenceAmplitude1:
+      class: IntField
+      at:
+        offset: 0x00A
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Reference channel amplitude readback Fix_16_15"
+    #########################################################
+    ## Config registers
+    #########################################################
+    rfEnable:
+      class: IntField
+      at:
+        offset: 0x800
+        nelms: 1
+      sizeBits: 1
+      mode: RW
+      description: "Enable DAC output"
+    #########################################################
+    modeSelect:
+      class: IntField
+      at:
+        offset: 0x800
+        nelms: 1
+      sizeBits: 1
+      lsBit: 1
+      mode: RW
+      description: "0 - user generated IQ (streaming), 1 - registered defined IQ (CW)"
+    #########################################################
+    loSelect:
+      class: IntField
+      at:
+        offset: 0x800
+        nelms: 1
+      sizeBits: 1
+      lsBit: 2
+      mode: RW
+      description: "0 - uncorrected DUC, 1 - phase corrected DUC"
+    #########################################################
+    referenceChannel0:
+      class: IntField
+      at:
+        offset: 0x800
+        nelms: 1
+      sizeBits: 4
+      lsBit: 3
+      mode: RW
+      description: "Reference channel"
+    #########################################################
+    referenceChannel1:
+      class: IntField
+      at:
+        offset: 0x800
+        nelms: 1
+      sizeBits: 4
+      lsBit: 7
+      mode: RW
+      description: "Reference channel"
+    #########################################################
+    invertCorrection:
+      class: IntField
+      at:
+        offset: 0x801
+        nelms: 1
+      sizeBits: 1
+      lsBit: 3
+      mode: RW
+      description: "Invert reference phase correction"
+    #########################################################
+    basebandISet:
+      class: IntField
+      at:
+        offset: 0x804
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RW
+      description: "I setpoint"
+    #########################################################
+    basebandQSet:
+      class: IntField
+      at:
+        offset: 0x806
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RW
+      description: "Q setpoint"
+    #########################################################
+    dacOffset:
+      class: IntField
+      at:
+        offset: 0x808
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RW
+      description: "DAC output offset"
+    #########################################################
+    dacMin:
+      class: IntField
+      at:
+        offset: 0x80C
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RW
+      description: "Clip DAC at min value"
+    #########################################################
+    dacMax:
+      class: IntField
+      at:
+        offset: 0x80E
+        nelms: 1
+      sizeBits: 16
+      isSigned: yes
+      mode: RW
+      description: "Clip DAC at max value"
+    #########################################################
+    scratchPad:
+      class: IntField
+      at:
+        offset: 0xFFC
+        nelms: 1
+      sizeBits: 32
+      isSigned: no
+      mode: RW
+      description: "scratch pad"

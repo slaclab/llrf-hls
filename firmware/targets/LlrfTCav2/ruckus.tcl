@@ -19,3 +19,6 @@ loadConstraints -dir  "$::DIR_PATH/hdl"
 
 # Set the AppCore to amc_carrier_core at the end of target's ruckus.tcl file
 set_property library amc_carrier_core [get_files AppCore.vhd]
+
+# Remove erroneous clock constraints
+remove_files AppTopXCKU060.xdc

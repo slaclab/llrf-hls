@@ -1,0 +1,115 @@
+##############################################################################
+## This file is part of 'SLAC Firmware Standard Library'.
+## It is subject to the license terms in the LICENSE.txt file found in the
+## top-level directory of this distribution and at:
+##    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+## No part of 'SLAC Firmware Standard Library', including this file,
+## may be copied, modified, propagated, or distributed except according to
+## the terms contained in the LICENSE.txt file.
+##############################################################################
+#schemaversion 3.0.0
+#once llrfDemod.yaml
+
+LlrfDemod: &LlrfDemod
+  description: "LLRF Demod Configuration/Status"
+  class: MMIODev
+  configPrio: 1
+  size: 0x1000
+  #########
+  children:
+  #########
+    #########################################################
+    ## Status registers
+    #########################################################
+    version:
+      class: IntField
+      at:
+        offset: 0x0
+      sizeBits: 32
+      mode: RO
+      description: "Version number"
+    #########################################################
+    phase:
+      class: IntField
+      at:
+        offset: 0x004
+        nelms: 12
+        stride: 4
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Phase readback Fix16_15"
+    #########################################################
+    amp:
+      class: IntField
+      at:
+        offset: 0x006
+        nelms: 12
+        stride: 4
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Amplitude readback Fix16_15"
+    #########################################################
+    phaseMaxHold:
+      class: IntField
+      at:
+        offset: 0x034
+        nelms: 12
+        stride: 4
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Phase readback Fix16_15"
+    #########################################################
+    ampMaxHold:
+      class: IntField
+      at:
+        offset: 0x036
+        nelms: 12
+        stride: 4
+      sizeBits: 16
+      isSigned: yes
+      mode: RO
+      description: "Amplitude readback Fix16_15"
+    #########################################################
+    setI:
+      class: IntField
+      at:
+        offset: 0x800
+        nelms: 12
+        stride: 4
+      sizeBits: 16
+      isSigned: yes
+      mode: RW
+      description: "Set I Fix16_14"
+    #########################################################
+    setQ:
+      class: IntField
+      at:
+        offset: 0x802
+        nelms: 12
+        stride: 4
+      sizeBits: 16
+      isSigned: yes
+      mode: RW
+      description: "Set Q Fix16_14"
+    #########################################################
+    maxHoldReset:
+      class: IntField
+      at:
+        offset: 0x830
+      sizeBits: 1
+      lsBit: 0
+      mode: RW
+      description: "Reset max hold registers"
+    #########################################################
+    scratchPad:
+      class: IntField
+      at:
+        offset: 0xFFC
+        nelms: 1
+      sizeBits: 32
+      isSigned: no
+      mode: RW
+      description: "scratch pad"
