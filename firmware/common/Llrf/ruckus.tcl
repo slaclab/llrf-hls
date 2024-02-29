@@ -5,7 +5,8 @@ source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
 loadSource -dir  "$::DIR_PATH/rtl/"
 
 # Check for valid FPGA
-if { $::env(PRJ_PART) == "XCKU040-FFVA1156-2-E" } {
+if { $::env(PRJ_PART) == "XCKU040-FFVA1156-2-E" ||
+     $::env(USE_APPTOP_040_INTF == 1 } {
     loadSource -dir "$::DIR_PATH/rtl/xcku040/"
 } elseif { $::env(PRJ_PART) eq {XCKU060-FFVA1156-2-E} ||
 	   $::env(PRJ_PART) eq {XCKU095-FFVA1156-2-E} } {

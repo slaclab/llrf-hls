@@ -68,6 +68,8 @@ export RTM_INTF = Version2
 export DEFAULT_TIMING = LCLS-I
 #export DEFAULT_TIMING = LCLS-II
 
+export USE_APPTOP_040_INTF = 1
+
 ##########################################################################################
 # Applications must define the application common path where AppCore.vhd exists
 ##########################################################################################
