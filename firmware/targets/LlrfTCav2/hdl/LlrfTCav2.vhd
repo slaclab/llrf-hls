@@ -41,12 +41,12 @@ entity LlrfTCav2 is
       -- Application Ports --
       -----------------------
       -- AMC's JESD Ports
-      jesdRxP          : in    Slv10Array(1 downto 0);
-      jesdRxN          : in    Slv10Array(1 downto 0);
-      jesdTxP          : out   Slv10Array(1 downto 0);
-      jesdTxN          : out   Slv10Array(1 downto 0);
-      jesdClkP         : in    Slv4Array(1 downto 0);
-      jesdClkN         : in    Slv4Array(1 downto 0);
+      jesdRxP          : in    Slv7Array(1 downto 0);
+      jesdRxN          : in    Slv7Array(1 downto 0);
+      jesdTxP          : out   Slv7Array(1 downto 0);
+      jesdTxN          : out   Slv7Array(1 downto 0);
+      jesdClkP         : in    Slv3Array(1 downto 0);
+      jesdClkN         : in    Slv3Array(1 downto 0);
       -- AMC's JTAG Ports
       jtagPri          : inout Slv5Array(1 downto 0);
       jtagSec          : inout Slv5Array(1 downto 0);
@@ -158,10 +158,7 @@ architecture top_level of LlrfTCav2 is
       3 => 1,
       4 => 4,
       5 => 5,
-      6 => 6,
-      7 => 7,
-      8 => 8,
-      9 => 9);
+      6 => 6);
 
    -- AXI-Lite Interface (axilClk domain)
    signal axilClk              : sl;
@@ -225,8 +222,8 @@ begin
          JESD_DRP_EN_G        => false,           -- Configured by application
          JESD_RX_LANE_G       => (others => 6),   -- Configured by application
          JESD_TX_LANE_G       => (0 => 0, 1 => 7),   -- Configured by application
-         JESD_RX_POLARITY_G   => (others => "0111111111"),  -- Configured by application
-         JESD_TX_POLARITY_G   => (others => "0001010111"),  -- Configured by application
+         JESD_RX_POLARITY_G   => (others => "0111111"),  -- Configured by application
+         JESD_TX_POLARITY_G   => (others => "0001010"),  -- Configured by application
          JESD_RX_ROUTES_G     => (others => JESD_ROUTES_INIT_C),  -- Configured by application
          JESD_TX_ROUTES_G     => (others => JESD_TX_ROUTES_C),  -- Configured by application
          JESD_REF_SEL_G       => (      -- Configured by application
@@ -237,8 +234,8 @@ begin
             0                 => 0,
             1                 => 2),
          SIG_GEN_ADDR_WIDTH_G => (others => 12),         -- 4096 elements
-         SIG_GEN_LANE_MODE_G  => (others => "1111111111"),  -- 16-bit outputs SigValues(15:0)
-         SIG_GEN_RAM_CLK_G    => (others => "0000000000"))  -- jesdClk2x
+         SIG_GEN_LANE_MODE_G  => (others => "1111111"),  -- 16-bit outputs SigValues(15:0)
+         SIG_GEN_RAM_CLK_G    => (others => "0000000"))  -- jesdClk2x
       port map (
          ----------------------
          -- Top Level Interface
