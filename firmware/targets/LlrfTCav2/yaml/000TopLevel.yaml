@@ -116,6 +116,16 @@ stream: &stream
     stripHeader: yes
     TDEST: 0x80
 
+bldstream: &bldstream
+  SRP:
+    protocolVersion: SRP_UDP_NONE
+  UDP:
+    port: 8198
+    numRxThreads: *udpThreads
+    threadPriority:  *udpPri
+    pollSecs: 1
+
+
 NetIODev:
   ipAddr: 10.0.1.105
   class: NetIODev
@@ -231,3 +241,8 @@ NetIODev:
          <<: *stream
          TDESTMux:
            TDEST: 0x87
+     bldstream:
+       class: Field
+       at:
+         <<: *bldstream
+
