@@ -41,6 +41,7 @@ entity AppTimeSlot is
       -- Clocks and resets
       clk                 : in    sl;
       rst                 : in    sl;
+      strobe              : in    sl := '0';
       trig                : in    sl;
       dest                : in    slv(2 downto 0) := "000";
       message             : in    TimingMessageType;
@@ -73,9 +74,13 @@ begin
   begin
     v := r;
 
-    if trig = '1' then
+    if ((trig = '1'   and MODE_DEST_G = "CONTROL") or
+        (trig = '1'   and MODE_DEST_G = "MESSAGE") or
+        (strobe = '1' and MODE_DEST_G = "TRIGGER")) then
       v.timeStamp := message.timestamp;
-
+    end if;
+    
+    if trig = '1' then
       if MODE_DEST_G = "CONTROL" then
         -- UED
         v.timeSlot  := message.control(0)(4 downto 0);

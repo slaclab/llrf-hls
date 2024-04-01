@@ -441,6 +441,7 @@ begin
      port map (
        clk        => timingClk,
        rst        => timingRst,
+       strobe     => strobe_360Hz,
        trig       => s_trigStrobe,
        dest       => destTrig,
        message    => timingMessage,
