@@ -121,6 +121,7 @@ begin
                -- Wait for a trigger re and assign select mux accordingly
                v.trigStrobe := '1';
                if (mode_i = "00" and  (s_trigRe(0) = '1' or s_trigRe(1) = '1')) then
+                  v.trigStrobe := '0';
                   v.sel := "00";
                   -- Next state
                   v.state := BUSY_S;
