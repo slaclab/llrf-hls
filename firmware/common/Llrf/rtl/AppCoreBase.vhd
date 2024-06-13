@@ -213,9 +213,8 @@ architecture mapping of AppCoreBase is
    signal daqTrig         : sl;  -- trigger for DaqMux
    signal destTrig        : slv(2 downto 0);
    signal strobe_360Hz    : sl;
-   
-   signal trigInput     : slv(19 downto 0);
---   signal s_trigPulse   : sl;
+   signal timingBus_strobe : sl;
+
    signal s_trigStrobe  : sl;
    signal s_trigIndex   : sl;
    signal s_trigMode    : slv(1 downto 0);
@@ -342,7 +341,7 @@ begin
    destTrig      <= (timingTrig.trigPulse(4) or timingTrig.trigPulse(5)) &
                     (timingTrig.trigPulse(2) or timingTrig.trigPulse(3)) &
                     (timingTrig.trigPulse(0) or timingTrig.trigPulse(1));
-   strobe_360Hz  <= timingBus.strobe when (timingMessage.acRates/=0) else
+   strobe_360Hz  <= timingBus_strobe when (timingMessage.acRates/=0) else
                     '0';
    
    --------------------
@@ -511,11 +510,17 @@ begin
                   disable   => '0',
                   timingIn  => timingBus,
                   timingOut => timingMessage );
-
+     -- timingMessage is delayed.  Delay strobe.
+     STROBE_D : entity surf.RegisterVector
+       port map ( clk       => timingClk,
+                  rst       => timingRst,
+                  sig_i(0)  => timingBus.strobe,
+                  reg_o(0)  => timingBus_strobe );
    end generate;
 
    GEN_LCLS_II : if APP_TIMING_MODE_C /= 1 generate
-     timingMessage <= timingBus.message;
+     timingMessage    <= timingBus.message;
+     timingBus_strobe <= timingBus.strobe;
    end generate;
 
    U_DiagnBus : entity xil_defaultlib.AppDiagnBus
@@ -525,7 +530,7 @@ begin
        -- timingClk domain
        timingClk      => timingClk,
        timingRst      => timingRst,
-       timingStrobe   => timingBus.strobe,
+       timingStrobe   => timingBus_strobe,
        timingMessage  => timingMessage,
        trigger        => strobe_360Hz,
        -- diagnosticClk domain
