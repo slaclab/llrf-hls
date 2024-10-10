@@ -512,7 +512,7 @@ LlrfHls: &LlrfHls
       class: IntField
       at:
         offset: 0x0a80
-        nelms: 18
+        nelms: 21
       encoding: IEEE_754
       sizeBits: 32
       mode: RO
@@ -522,7 +522,7 @@ LlrfHls: &LlrfHls
       class: IntField
       at:
         offset: 0x0b00
-        nelms: 18
+        nelms: 21
       encoding: IEEE_754
       sizeBits: 32
       mode: RO
@@ -532,7 +532,7 @@ LlrfHls: &LlrfHls
       class: IntField
       at:
         offset: 0x0b80
-        nelms: 18
+        nelms: 21
       encoding: IEEE_754
       sizeBits: 32
       mode: RO
@@ -542,7 +542,7 @@ LlrfHls: &LlrfHls
       class: IntField
       at:
         offset: 0x0c00
-        nelms: 18
+        nelms: 21
       encoding: IEEE_754
       sizeBits: 32
       mode: RO
@@ -552,7 +552,7 @@ LlrfHls: &LlrfHls
       class: IntField
       at:
         offset: 0x0c80
-        nelms: 18
+        nelms: 21
       encoding: IEEE_754
       sizeBits: 32
       mode: RO
@@ -562,7 +562,7 @@ LlrfHls: &LlrfHls
       class: IntField
       at:
         offset: 0x0d00
-        nelms: 18
+        nelms: 21
       encoding: IEEE_754
       sizeBits: 32
       mode: RO
