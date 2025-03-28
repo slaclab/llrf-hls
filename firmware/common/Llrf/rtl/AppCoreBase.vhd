@@ -173,7 +173,7 @@ architecture mapping of AppCoreBase is
    constant APP_INDEX_C       : natural := 4;
    --constant WAVEFORM_INDEX_C  : natural := 4;
    constant SYSGEN_INDEX_C    : natural := 5;
-   constant MMCM_DRP_INDEX_C  : natural := 6;
+   constant FBCHAN_INDEX_C    : natural := 6;
 
    signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray (NUM_AXI_MASTERS_C-1 downto 0);
@@ -212,7 +212,7 @@ architecture mapping of AppCoreBase is
    signal accelTrig       : sl;
    signal daqTrig         : sl;  -- trigger for DaqMux
    signal destTrig        : slv(2 downto 0);
-   signal strobe_360Hz    : sl;
+   signal openGate        : sl;
    signal timingBus_strobe : sl;
 
    signal s_trigStrobe  : sl;
@@ -331,19 +331,17 @@ begin
          mAxiReadSlaves      => axilReadSlaves);
 
 
-   accelTrig     <= (timingTrig.trigPulse(0) or
-                     timingTrig.trigPulse(2) or
-                     timingTrig.trigPulse(4)) and
-                    timingTrig.trigPulse(7);
+   accelTrig     <= timingTrig.trigPulse(0) or
+                    timingTrig.trigPulse(2) or
+                    timingTrig.trigPulse(4);
    stdbyTrig     <= timingTrig.trigPulse(1) or
                     timingTrig.trigPulse(3) or
                     timingTrig.trigPulse(5);
    destTrig      <= (timingTrig.trigPulse(4) or timingTrig.trigPulse(5)) &
                     (timingTrig.trigPulse(2) or timingTrig.trigPulse(3)) &
                     (timingTrig.trigPulse(0) or timingTrig.trigPulse(1));
-   strobe_360Hz  <= timingBus_strobe when (timingMessage.acRates/=0) else
-                    '0';
-   
+   openGate      <= timingTrig.trigPulse(7); -- 0 delay, please
+
    --------------------
    -- LCLS ACCEL/STBY Trigger MUX
    --------------------
@@ -354,10 +352,9 @@ begin
          recClk         => timingClk,
          recRst         => timingRst,
          mode_i         => s_trigMode,
-         strobe_i       => strobe_360Hz,  -- reset for new trigger
+         strobe_i       => openGate,  -- reset for new trigger
          trig_i(0)      => accelTrig,
          trig_i(1)      => stdbyTrig,
---         trig_o         => s_trigPulse,
          trigStrobe_o   => s_trigStrobe,
          trigIndex_o    => s_trigIndex );
 
@@ -440,16 +437,33 @@ begin
      port map (
        clk        => timingClk,
        rst        => timingRst,
-       strobe     => strobe_360Hz,
+       strobe     => openGate,
        trig       => s_trigStrobe,
        dest       => destTrig,
        message    => timingMessage,
        timeStamp  => trigTimestamp,
-       timeSlot   => trigTimeslot );
+       timeSlot   => trigTimeslot,
+       -- Axi clk domain
+       axiClk         => axilClk,
+       axiRst         => axilRst,
+       axiReadMaster  => axilReadMasters (FBCHAN_INDEX_C),
+       axiReadSlave   => axiLReadSlaves  (FBCHAN_INDEX_C),
+       axiWriteMaster => axilWriteMasters(FBCHAN_INDEX_C),
+       axiWriteSlave  => axilWriteSlaves (FBCHAN_INDEX_C) );
    
    ----------------
    -- SYSGEN Module
    ----------------
+   GEN_SIM : if SIMULATION_G generate
+     diagnClk <= timingClk;
+     diagnRst <= timingRst;
+     s_trigMode <= "10";
+     axilReadSlaves (SYSGEN_INDEX_C) <= AXI_LITE_READ_SLAVE_INIT_C;
+     axilWriteSlaves(SYSGEN_INDEX_C) <= AXI_LITE_WRITE_SLAVE_INIT_C;
+     hlsStreamMaster <= AXI_STREAM_MASTER_INIT_C;
+   end generate GEN_SIM;
+
+   GEN_NOSIM : if not SIMULATION_G generate
    U_SysGen : entity xil_defaultlib.AppLlrfCore
       generic map (
          TPD_G                => TPD_G,
@@ -503,6 +517,7 @@ begin
          streamRst      => axilRst,
          streamMaster   => hlsStreamMaster,
          streamSlave    => hlsStreamSlave );
+   end generate GEN_NOSIM;
 
    GEN_LCLS_I : if APP_TIMING_MODE_C = 1 generate
      V2FV1 : entity lcls_timing_core.EvrV2FromV1
@@ -532,7 +547,7 @@ begin
        timingRst      => timingRst,
        timingStrobe   => timingBus_strobe,
        timingMessage  => timingMessage,
-       trigger        => strobe_360Hz,
+       trigger        => openGate,
        -- diagnosticClk domain
        diagnosticClk  => diagnClk,
        diagnosticRst  => diagnRst,
@@ -574,9 +589,6 @@ begin
        axilWriteSlave  => open
        );
 
-   axilReadSlaves  (MMCM_DRP_INDEX_C) <= AXI_LITE_READ_SLAVE_INIT_C;
-   axilWriteSlaves (MMCM_DRP_INDEX_C) <= AXI_LITE_WRITE_SLAVE_INIT_C;
-
    -----------------------
    -- AMC BAY[0] Interface
    -----------------------
@@ -591,9 +603,9 @@ begin
          jesdSysRef      => jesdSysRef(0),
          jesdRxSync      => jesdRxSync(0),
          -- DAC Interface (jesdClk domain)
-         dacValues(0)    => s_dacLs(0),
-         dacValues(1)    => s_dacLs(1),
-         dacValues(2)    => s_dacLs(2),
+         dacValues(0)    => s_dacLs(0)(15 downto 0),
+         dacValues(1)    => s_dacLs(1)(15 downto 0),
+         dacValues(2)    => s_dacLs(2)(15 downto 0),
          -- AXI-Lite Interface
          axilClk         => axilClk,
          axilRst         => axilRst,

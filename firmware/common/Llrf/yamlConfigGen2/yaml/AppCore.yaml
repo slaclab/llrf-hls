@@ -11,14 +11,9 @@
 #once AppCore.yaml
 #include AmcMrLlrfDownConvert.yaml
 #include AmcMrLlrfGen2UpConvert.yaml
-#include AppLlrfCore.yaml
-#include GenericMemory.yaml
-#include ClockManager.yaml
 #include RtmRfInterlock.yaml
-#include Si5317a.yaml
-#include BsssAxiStream_2.yaml
-#include BsssAxiStream_8.yaml
 #include EvrV2TriggerReg.yaml
+#include AppTimeSlot.yaml
 
 AppCore: &AppCore
   name: AppCore
@@ -53,11 +48,12 @@ AppCore: &AppCore
         stride: 0x100
     ##################################################
     Sysgen:
-       <<: *AppLlrfCore
-       at:
+      <<: *AppLlrfCore
+      at:
         offset: 0x05000000
     ##################################################
-#    MMCM_DRP:
-#       <<: *ClockManager
-#       at:
-#        offset: 0x06000000
+    AppTimeSlot:
+      <<: *AppTimeSlot
+      at:
+        offset: 0x06000000 
+    ##################################################

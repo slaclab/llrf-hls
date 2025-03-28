@@ -1,0 +1,13 @@
+Targets:
+Llrf		NC Timing,
+		V1 upconverter,
+		HXR(3) => 1-6, SXR(4) => 7-12, DUMPBSY(2) => 13-18
+LlrfGen2	NC Timing,
+		V2 upconverter,
+		Trigger => DEST (0,6,12)
+LlrfGen2SC	SC Timing,
+		V2 upconverter,
+		Trigger => DEST (0,6,12)
+LlrfTCav2	SC => NC Timing,
+		V2 upconverter,
+		Trigger => DEST (0,6,12)

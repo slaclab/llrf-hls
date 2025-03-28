@@ -1,0 +1,89 @@
+##############################################################################
+## This file is part of 'SLAC Firmware Standard Library'.
+## It is subject to the license terms in the LICENSE.txt file found in the
+## top-level directory of this distribution and at:
+##    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+## No part of 'SLAC Firmware Standard Library', including this file,
+## may be copied, modified, propagated, or distributed except according to
+## the terms contained in the LICENSE.txt file.
+##############################################################################
+#schemaversion 3.0.0
+#once AppTimeSlot.yaml
+
+AppTimeSlot: &AppTimeSlot
+  name: AppTimeSlot
+  description: Application time slot selection
+  size: 0x100
+  class: MMIODev
+  configPrio: 1
+  metadata:
+    numChans: &numChans 3
+  ########
+  children:
+  ########
+    #########################################################
+    mode:
+      class: IntField
+      at:
+        offset: 0x00
+      sizeBits: 4
+      mode: RW
+      enums:
+        - name: Trigger
+          class: Enum
+          value: 0
+        - name: Message
+          class: Enum
+          value: 1
+        - name: Sequence
+          class: Enum
+          value: 2
+      description: "Timeslot latching mode"
+    #########################################################
+    timeslotSource:
+      class: IntField
+      at:
+        offset: 0x01
+      sizeBits: 1
+      mode: RW
+      enums:
+        - name: Message
+          class: Enum
+          value: 0
+        - name: Constant
+          class: Enum
+          value: 1
+      description: "Timeslot source"
+    #########################################################
+    timeslotConstant:
+      class: IntField
+      at:
+        offset: 0x4
+      sizeBits: 5
+      mode: RW
+      description: "Timeslot constant value"
+    #########################################################
+    destOffset:
+      at:
+        offset: 0x8
+        nelms: *numChans
+        stride: 4
+      class: IntField
+      name: destOffset
+      sizeBits: 5
+      lsBit: 0
+      mode: RW
+      description: "Offset by destination"
+    #########################################################
+    trigOffset:
+      at:
+        offset: 0xA
+        nelms: *numChans
+        stride: 4
+      class: IntField
+      name: trigOffset
+      sizeBits: 5
+      lsBit: 0
+      mode: RW
+      description: "Offset by trigger input"
+    #########################################################
