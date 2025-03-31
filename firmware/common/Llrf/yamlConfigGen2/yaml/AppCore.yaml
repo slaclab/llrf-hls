@@ -13,6 +13,7 @@
 #include AmcMrLlrfGen2UpConvert.yaml
 #include RtmRfInterlock.yaml
 #include EvrV2TriggerReg.yaml
+#include AppLlrfCore.yaml
 #include AppTimeSlot.yaml
 
 AppCore: &AppCore
