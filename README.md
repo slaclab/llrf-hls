@@ -1,5 +1,7 @@
 # llrf-hls
 
+[DOE Code](https://www.osti.gov/doecode/biblio/78583)
+
 The main branch is no longer in use for development purposes. Therefore, please utilize the following branches for your project:
 
 1. facet_submodule_update.branch: for the FACET project
