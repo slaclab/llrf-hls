@@ -300,6 +300,9 @@ begin
      end if;
 
      cin <= v;
+
+     axiReadSlave  <= c.axiReadS;
+     axiWriteSlave <= c.axiWriteS;
    end process;
 
    reg_seq: process(axiClk) is
