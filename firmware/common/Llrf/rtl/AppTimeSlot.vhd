@@ -32,11 +32,12 @@ use unisim.vcomponents.all;
 entity AppTimeSlot is
    generic (
      MODE_DEST_G      : string := "TRIGGER";
-     DEST_CHAN_G      : NaturalArray := (0, 6, 12)
+     DEST_CHAN_G      : NaturalArray := (0, 6, 12);
      --  "TRIGGER" : get destination from dest signal
      --  "MESSAGE" : get destination from message dest field
      --  "CONTROL" : get destination from message control0 field
      --  "NONE"    : no destination dependence
+     DEBUG_G          : boolean := true
       );
    port (
       -- Clocks and resets
@@ -87,9 +88,9 @@ architecture mapping of AppTimeSlot is
     variable mode : ModeType;
   begin
     case s is
-      when "TRIGGER" => mode := S_TRIGGER;
-      when "MESSAGE" => mode := S_MESSAGE;
       when "CONTROL" => mode := S_CONTROL;
+      when "MESSAGE" => mode := S_MESSAGE;
+      when others    => mode := S_TRIGGER;
     end case;
     return mode;
   end function toMode;
@@ -111,8 +112,8 @@ architecture mapping of AppTimeSlot is
     variable source : SourceType;
   begin
     case v is
-      when "0" => source := V_MESSAGE;
-      when "1" => source := V_REG;
+      when "1"    => source := V_REG;
+      when others => source := V_MESSAGE;
     end case;
     return source;
   end function toSource;
@@ -205,6 +206,12 @@ architecture mapping of AppTimeSlot is
   signal configSV, configV : slv(CONFIG_BITS_C-1 downto 0);
   signal configS           : ConfigType;
 
+  component ila_0
+    port (
+      clk  : sl;
+      probe0 : slv(255 downto 0) );
+  end component;
+  
 begin
 
   assert (MODE_DEST_G = "CONTROL" or MODE_DEST_G = "MESSAGE" or
@@ -322,4 +329,20 @@ begin
 
    configS <= toConfig( configSV );
 
+  GEN_DEBUG : if DEBUG_G generate
+    U_ILA : ila_0
+      port map (
+        clk      => clk,
+        probe0(0) => strobe,
+        probe0(1) => trig,
+        probe0(4 downto 2) => dest,
+        probe0(7 downto 5) => message.acTimeSlot,
+        probe0(12 downto 8) => r.timeSlot,
+        probe0(16 downto 13) => message.beamRequest(7 downto 4),
+        probe0(21 downto 17) => c.config.timeSlotF,
+        probe0(25 downto 22) => toSlv(c.config.mode),
+        probe0(26 downto 26) => toSlv(c.config.tsSource),
+        probe0(255 downto 27) => (others=>'0') );
+  end generate;
+  
 end mapping;

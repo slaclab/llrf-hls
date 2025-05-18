@@ -21,6 +21,6 @@ package AppOpts is
   --  Timeslot mapping
   constant MODE_1080HZ_C     : boolean := false;
   constant MODE_DEST_C       : string  := "TRIGGER";
-  constant DEST_CHAN_C       : NaturalArray := ( 0, 6, 12);
+  constant DEST_CHAN_C       : NaturalArray(2 downto 0) := ( 12, 6, 0 );
 
 end AppOpts;
