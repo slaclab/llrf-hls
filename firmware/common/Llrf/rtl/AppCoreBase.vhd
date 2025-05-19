@@ -216,6 +216,7 @@ architecture mapping of AppCoreBase is
    signal timingBus_strobe : sl;
 
    signal s_trigStrobe  : sl;
+   signal s_trigStrobeD : sl;
    signal s_trigIndex   : sl;
    signal s_trigMode    : slv(1 downto 0);
    signal trigRtmMod      : sl;
@@ -905,16 +906,23 @@ begin
          dataIn  => appTrigConfigSlv(i),
          dataOut => appTrigConfigSlvS(i) );
 
+     U_Fire : entity surf.RegisterVector
+       port map (
+         clk      => timingClk,
+         rst      => timingRst,
+         sig_i(0) => s_trigStrobe,
+         reg_o(0) => s_trigStrobeD );
+     
      U_Trigger : entity lcls_timing_core.EvrV2Trigger
        generic map (
          CHANNELS_C   => 1,
-         TRIG_DEPTH_C => 0 ) -- no FIFO pipeline
+         TRIG_DEPTH_C => 0 )
        port map (
          clk        => timingClk,
          rst        => timingRst,
          config     => appTrigConfigS(i),
          arm(0)     => s_trigStrobe,
-         fire       => s_trigStrobe,
+         fire       => s_trigStrobeD,
          trigstate  => appTrig       (i) );
    end generate GEN_TRIG;
    

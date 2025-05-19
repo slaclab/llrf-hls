@@ -5,7 +5,7 @@
 -- Author     : Matt Weaver <weaver@slac.stanford.edu>
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2016-03-25
--- Last update: 2022-04-11
+-- Last update: 2018-12-28
 -- Platform   : 
 -- Standard   : VHDL'93/02
 -------------------------------------------------------------------------------
@@ -32,30 +32,22 @@ use surf.AxiLitePkg.all;
 use work.AxiLiteSimPkg.all;
 
 entity AxiLiteWriteMasterSim is
-  generic ( MAX_CMDS_G : integer := 32 );
+  generic ( CMDS : AxiLiteWriteCmdArray );
   port ( clk    : in sl;
          rst    : in  sl;
          master : out AxiLiteWriteMasterType;
          slave  : in  AxiLiteWriteSlaveType;
-         cmds   : in  AxiLiteWriteCmdArray(MAX_CMDS_G-1 downto 0);
-         start  : in  sl;
          done   : out sl );
 end entity;
 
 architecture behavior of AxiLiteWriteMasterSim is
 
-  type StateType is (IDLE_S, RUNNING_S);
-  
   type RegType is record
-    state  : StateType;
-    icmd   : integer;
-    done   : sl;
+    icmd : integer;
     master : AxiLiteWriteMasterType;
   end record;
   constant REG_INIT_C : RegType := (
-    state  => IDLE_S,
-    icmd   => 0,
-    done   => '0',
+    icmd => 0,
     master => AXI_LITE_WRITE_MASTER_INIT_C
     );
   signal r   : RegType := REG_INIT_C;
@@ -63,7 +55,7 @@ architecture behavior of AxiLiteWriteMasterSim is
   
 begin
 
-  comb : process ( r, rst, slave, start ) is
+  comb : process ( r, rst, slave ) is
     variable v : RegType;
   begin
     v := r;
@@ -80,36 +72,28 @@ begin
       v.master.bready := '0';
     end if;
 
-    case(r.state) is
-      when IDLE_S =>
-        if start = '1' then
-          v.done  := '0';
-          v.icmd  := 0;
-          v.state := RUNNING_S;
-        end if;
-      when RUNNING_S =>
-        if v.master.bready = '0' then
-          if cmds(r.icmd).addr=ADDR_TERM_C then
-            v.state := IDLE_S;
-            v.done  := '1';
-          else
-            v.master.awaddr  := cmds(r.icmd).addr;
-            v.master.awvalid := '1';
-            v.master.wdata   := cmds(r.icmd).value;
-            v.master.wvalid  := '1';
-            v.master.bready  := '1';
-            v.icmd           := r.icmd + 1;
-          end if;
-        end if;
-    end case;
-    
+    if v.master.bready = '0' and r.icmd < CMDS'length then
+      v.master.awaddr  := CMDS(r.icmd).addr;
+      v.master.awvalid := '1';
+      v.master.wdata   := CMDS(r.icmd).value;
+      v.master.wvalid  := '1';
+      v.master.bready  := '1';
+      v.icmd           := r.icmd + 1;
+    end if;
+
     if rst = '1' then
       v := REG_INIT_C;
       v.master.bready := '0';
     end if;
 
     master <= r.master;
-    done   <= r.done;
+--    master.bready <= rin.master.bready;
+
+    if (r.icmd = CMDS'length and v.master.bready = '0') then
+      done   <= '1';
+    else
+      done   <= '0';
+    end if;
     
     rin <= v;
   end process comb;
