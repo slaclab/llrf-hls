@@ -18,6 +18,7 @@
 #include Si5317a.yaml
 #include BsssAxiStream_2.yaml
 #include BsssAxiStream_8.yaml
+#include CalDspWrapper.yaml
 
 AppCore: &AppCore
   name: AppCore
@@ -43,6 +44,11 @@ AppCore: &AppCore
       <<: *RtmRfInterlock
       at:
         offset: 0x02000000
+    ##################################################
+    CalDspWrapper:
+      <<: *CalDspWrapper
+      at:
+        offset: 0x04000000
     ##################################################
     Sysgen:
        <<: *AppLlrfCore

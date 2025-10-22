@@ -34,6 +34,8 @@ use amc_carrier_core.AppTopPkg.all;
 library lcls_timing_core;
 use lcls_timing_core.TimingPkg.all;
 
+library sysgen_dsp_lib;
+
 library xil_defaultlib;
 use xil_defaultlib.AppOpts.all;
 
@@ -163,8 +165,8 @@ architecture mapping of AppCore is
    constant AMC0_INDEX_C      : natural := 0;
    constant AMC1_INDEX_C      : natural := 1;
    constant RTM_INDEX_C       : natural := 2;
-   constant WAVEFORM_INDEX_C  : natural := 3;
-   --constant WAVEFORM_INDEX_C  : natural := 4;
+   constant WAVEFORM_INDEX_C  : natural := 3; --unused
+   constant CALDSP_INDEX_C    : natural := 4;
    constant SYSGEN_INDEX_C    : natural := 5;
    constant MMCM_DRP_INDEX_C  : natural := 6;
    constant BSSS_INDEX_C      : natural := 7;
@@ -184,7 +186,7 @@ architecture mapping of AppCore is
    signal s_fpgaInterlock : sl := '0';
 
    -----------------Timing--------------------------
-   constant TRIG_SIZE_C : integer := 16;
+   constant TRIG_SIZE_C : integer := 12;
    signal s_trigPulse   : slv((TRIG_SIZE_C/2)-1 downto 0);
    signal s_trigStrobe  : slv((TRIG_SIZE_C/2)-1 downto 0);
    signal s_trigIndex   : slv((TRIG_SIZE_C/2)-1 downto 0);
@@ -201,11 +203,11 @@ architecture mapping of AppCore is
    signal s_timingClk2x_locked : sl;
 
    -----------------Waveform BRAM--------------------------
-   constant WF_ADDR_WIDTH_C : positive := 11; --ite(DSP_CLK_2X_G, 11, 10);  -- 2048 Samples
-   constant WF_DATA_WIDTH_C : positive := 32; --ite(DSP_CLK_2X_G, 16, 32);  -- 2048 Samples
+   -- constant WF_ADDR_WIDTH_C : positive := 11; --ite(DSP_CLK_2X_G, 11, 10);  -- 2048 Samples
+   -- constant WF_DATA_WIDTH_C : positive := 32; --ite(DSP_CLK_2X_G, 16, 32);  -- 2048 Samples
 
-   signal s_wfAddr : slv11Array(1 downto 0);
-   signal s_wfData : slv32Array(1 downto 0);
+   -- signal s_wfAddr : slv11Array(1 downto 0);
+   -- signal s_wfData : slv32Array(1 downto 0);
 
    signal s_debugValids         :   Slv4Array(1 downto 0);
    signal s_debugValues         :   sampleDataVectorArray(1 downto 0, 3 downto 0);
@@ -238,6 +240,11 @@ architecture mapping of AppCore is
    signal timestampLatch   : slv(63 downto 0) := (others => '0');
    signal timeslotLatch    : slv(5 downto 0)  := (others => '0');
 
+   signal caldsp_dac         : slv(31 downto 0);
+   signal caldsp_debugValues : sampleDataVectorArray(1 downto 0,3 downto 0);
+   signal caldsp_debugValids : Slv4Array(1 downto 0);
+   signal caldsp_gate        : sl;
+   
    constant DEBUG_C : boolean := true;
 
    component ila_0
@@ -254,8 +261,8 @@ begin
                   probe0(  2 downto  1) => s_trigMode,
                   probe0(            3) => timingBus.strobe,
                   probe0( 19 downto  4) => timingTrig.trigPulse,
-                  probe0( 27 downto 20) => s_trigPulse,
-                  probe0(255 downto 28) => (others=>'0') );
+                  probe0( 25 downto 20) => s_trigPulse,
+                  probe0(255 downto 26) => (others=>'0') );
    end generate;
 
     -- We want to see DAC values on DaqMux
@@ -323,42 +330,7 @@ begin
          trigIndex_o    => s_trigIndex(i));
    end generate GEN_TRIG_MUX;
 
-
---   ----------------
---   -- IQ Axi lite BRAM waveforms
---   ----------------
---   GEN_WAVEFORMS : for i in 1 downto 0 generate
---      -- Dual port RAM accessible from axiLite
---      -- waveform input to the System Generator
---      U_Waveform : entity surf.AxiDualPortRam
---         generic map (
---            TPD_G        => TPD_G,
---            --BRAM_EN_G    => true,
---            --REG_EN_G     => true,
---            --MODE_G       => "write-first",
---            ADDR_WIDTH_G => WF_ADDR_WIDTH_C,
---            DATA_WIDTH_G => WF_DATA_WIDTH_C,
---            INIT_G       => "0")
---         port map (
---            -- Axi clk domain
---            axiClk         => axilClk,
---            axiRst         => axilRst,
---            axiReadMaster  => axilReadMasters (WAVEFORM_INDEX_C+i),
---            axiReadSlave   => axiLReadSlaves  (WAVEFORM_INDEX_C+i),
---            axiWriteMaster => axilWriteMasters(WAVEFORM_INDEX_C+i),
---            axiWriteSlave  => axilWriteSlaves (WAVEFORM_INDEX_C+i),
---
---            -- Sysgen clk domain
---            clk  => jesdClk(1),
---            rst  => jesdRst(1),
---            en   => '1',
---            addr => s_wfAddr(i),
---            dout => s_wfData(i));
---   end generate GEN_WAVEFORMS;
-
-
    U_SYNC_TRIG : for i in 1 downto 0 generate
-
       U_SYNC_ONE_SHOT  : entity surf.SynchronizerOneShot
          generic map (
             TPD_G => TPD_G)
@@ -366,7 +338,6 @@ begin
             clk     => jesdClk(i),
             dataIn  => s_trigPulse(4),
             dataOut => trigHw(i));
-
    end generate;
 
 
@@ -391,10 +362,33 @@ begin
          reg_o(63 downto 0)  => timestampLatch,
          reg_o(69 downto 64) => timeslotLatch);
 
-
-   ----------------
-   -- SYSGEN Module
-   ----------------
+   U_SYNC_CALDSP_GATE : entity surf.Synchronizer
+     port map (
+       clk     => jesdClk(0),
+       dataIn  => timingTrig.trigPulse(12),
+       dataOut => caldsp_gate );
+   
+   --------------------
+   -- SYSGEN Modules --
+   --------------------
+   U_CalDsp : entity sysgen_dsp_lib.CalDspWrapper
+     port map (
+       jesdClk     => jesdClk,
+       jesdRst     => jesdRst,
+       adcValues   => s_adcValues,
+       adcValids   => s_adcValids,
+       trigIn      => caldsp_gate,
+       dacOut      => caldsp_dac,
+       debugValues => caldsp_debugValues,
+       debugValids => caldsp_debugValids,
+       -- AXI-Lite Port
+       axilClk         => axilClk,
+       axilRst         => axilRst,
+       axilReadMaster  => axilReadMasters (CALDSP_INDEX_C),
+       axilReadSlave   => axilReadSlaves  (CALDSP_INDEX_C),
+       axilWriteMaster => axilWriteMasters(CALDSP_INDEX_C),
+       axilWriteSlave  => axilWriteSlaves (CALDSP_INDEX_C) );
+       
    U_SysGen : entity xil_defaultlib.AppLlrfCore
       generic map (
          TPD_G                => TPD_G,
@@ -402,21 +396,21 @@ begin
          NUM_OF_TRIG_PULSES_G => s_trigPulse'length )
       port map(
          -- JESD Interface
-         jesdClk     => jesdClk,
-         jesdRst     => jesdRst,
-         jesdClk2x   => jesdClk2x,
-         jesdRst2x   => jesdRst2x,
-         adcHs       => s_adcValues,
-         adcHsValid  => s_adcValids,
-         dacHs       => s_dacHs,
-         dacLs       => s_dacLs,
-         debug       => s_debugValues,
-         debugValids => s_debugValids,
-         diagnClk    => diagnClk,
-         diagn       => diagnBus.data,
-         diagnFixed  => diagnBus.fixed,
-         diagnSevr   => diagnBus.sevr,
-         diagnStrobe => diagnBus.strobe,
+         jesdClk        => jesdClk,
+         jesdRst        => jesdRst,
+         jesdClk2x      => jesdClk2x,
+         jesdRst2x      => jesdRst2x,
+         adcHs          => s_adcValues,
+         adcHsValid     => s_adcValids,
+         dacHs          => s_dacHs,
+         dacLs          => s_dacLs,
+         debug          => s_debugValues,
+         debugValids    => s_debugValids,
+         diagnClk       => diagnClk,
+         diagn          => diagnBus.data,
+         diagnFixed     => diagnBus.fixed,
+         diagnSevr      => diagnBus.sevr,
+         diagnStrobe    => diagnBus.strobe,
          rfSwitch       => s_fpgaInterlock,
          timingClk      => timingClk,
          trigPulse      => s_trigPulse(0),
@@ -781,8 +775,9 @@ begin
 	 mAxisMaster     => obAppDebugMaster,
 	 mAxisSlave      => obAppDebugSlave);
 
-   debugValues <= s_debugValues;
-   debugValids <= s_debugValids;
+   -- jesdClk domain
+   debugValues <= s_debugValues when caldsp_gate = '1' else caldsp_debugValues;
+   debugValids <= s_debugValids when caldsp_gate = '0' else caldsp_debugValids;
 
    --------------------------
    -- Terminate usued outputs

@@ -32,6 +32,9 @@ use amc_carrier_core.AppTopPkg.all;
 library lcls_timing_core;
 use lcls_timing_core.TimingPkg.all;
 
+library xil_defaultlib;
+use xil_defaultlib.AppOpts.all;
+
 entity LlrfGen2 is
    generic (
       TPD_G        : time := 1 ns;
@@ -332,13 +335,15 @@ begin
       generic map (
          TPD_G           => TPD_G,
          BUILD_INFO_G    => BUILD_INFO_G,
-         DISABLE_BSA_G   => false,         -- true = doesn't build the BSA engine
+         DISABLE_BSA_G   => true,         -- true = doesn't build the BSA engine
          DISABLE_BLD_G   => true,         -- true = doesn't build the BLD engine
          DISABLE_MPS_G   => true,         -- true = doesn't build MPS engine
+         DISABLE_DDR_SRP_G => true,       -- false = includes SRPv3 for DDR
          RTM_ETH_G       => false,        -- false = 10GbE over backplane
-         CORE_TRIGGERS_G => 12,
+         CORE_TRIGGERS_G => 13,
          AXIL_RINGB_G    => false,        -- false = no AxiLiteRingBuffer from TimingCore
-         CLKSEL_MODE_G   => "SELECT",
+         CLKSEL_MODE_G   => APP_CLKSEL_STR_C,
+         USE_TPGMINI_G   => false,
          APP_TYPE_G      => APP_NULL_TYPE_C)  -- Configured by application (refer to AmcCarrierPkg for list of all application types
       port map (
          ----------------------

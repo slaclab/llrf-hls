@@ -18,6 +18,7 @@ package AppOpts is
 
   constant APP_TIMING_MODE_C : integer := 2; -- 1 or 2 (LCLS-I/II)
   constant APP_CLKSEL_MODE_C : integer := 1; -- 1 or 2 (LCLS-I/II)
+  constant APP_CLKSEL_STR_C  : string  := "LCLSIPIIC";
   constant UPCONVERT_V2_C    : boolean := true;
 
 end AppOpts;
