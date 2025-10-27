@@ -242,6 +242,7 @@ architecture mapping of AppCore is
 
    signal app_dac            : slv(31 downto 0);
    signal caldsp_dac         : slv(31 downto 0);
+   signal caldsp_dacEn       : sl;
    signal caldsp_debugValues : sampleDataVectorArray(1 downto 0,3 downto 0);
    signal caldsp_debugValids : Slv4Array(1 downto 0);
    signal caldsp_gate        : sl := '0';
@@ -380,6 +381,7 @@ begin
          adcValues   => s_adcValues,
          adcValids   => s_adcValids,
          trigIn      => caldsp_gate,
+         dacEn       => caldsp_dacEn,
          dacOut      => caldsp_dac,
          debugValues => caldsp_debugValues,
          debugValids => caldsp_debugValids,
@@ -785,9 +787,9 @@ begin
 	 mAxisSlave      => obAppDebugSlave);
 
    -- jesdClk domain
-   debugValues <= s_debugValues when caldsp_gate = '0' else caldsp_debugValues;
-   debugValids <= s_debugValids when caldsp_gate = '0' else caldsp_debugValids;
-   s_dacHs     <= app_dac       when caldsp_gate = '0' else caldsp_dac;
+   debugValues <= s_debugValues when caldsp_gate  = '0' else caldsp_debugValues;
+   debugValids <= s_debugValids when caldsp_gate  = '0' else caldsp_debugValids;
+   s_dacHs     <= app_dac       when caldsp_dacEn = '0' else caldsp_dac;
    
    --------------------------
    -- Terminate usued outputs
