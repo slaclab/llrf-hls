@@ -173,9 +173,9 @@ architecture mapping of AppCore is
    constant BLD_INDEX_C       : natural := 8;
 
    signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
-   signal axilWriteSlaves  : AxiLiteWriteSlaveArray (NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilWriteSlaves  : AxiLiteWriteSlaveArray (NUM_AXI_MASTERS_C-1 downto 0) := (others => AXI_LITE_WRITE_SLAVE_INIT_C);
    signal axilReadMasters  : AxiLiteReadMasterArray (NUM_AXI_MASTERS_C-1 downto 0);
-   signal axilReadSlaves   : AxiLiteReadSlaveArray  (NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilReadSlaves   : AxiLiteReadSlaveArray  (NUM_AXI_MASTERS_C-1 downto 0) := (others => AXI_LITE_READ_SLAVE_INIT_C);
 
    -- Internal dac/adc signals
    signal s_dacHs        : slv(31 downto 0);
@@ -240,10 +240,11 @@ architecture mapping of AppCore is
    signal timestampLatch   : slv(63 downto 0) := (others => '0');
    signal timeslotLatch    : slv(5 downto 0)  := (others => '0');
 
+   signal app_dac            : slv(31 downto 0);
    signal caldsp_dac         : slv(31 downto 0);
    signal caldsp_debugValues : sampleDataVectorArray(1 downto 0,3 downto 0);
    signal caldsp_debugValids : Slv4Array(1 downto 0);
-   signal caldsp_gate        : sl;
+   signal caldsp_gate        : sl := '0';
    
    constant DEBUG_C : boolean := true;
 
@@ -362,33 +363,35 @@ begin
          reg_o(63 downto 0)  => timestampLatch,
          reg_o(69 downto 64) => timeslotLatch);
 
-   U_SYNC_CALDSP_GATE : entity surf.Synchronizer
-     port map (
-       clk     => jesdClk(0),
-       dataIn  => timingTrig.trigPulse(12),
-       dataOut => caldsp_gate );
-   
    --------------------
    -- SYSGEN Modules --
    --------------------
-   U_CalDsp : entity sysgen_dsp_lib.CalDspWrapper
-     port map (
-       jesdClk     => jesdClk,
-       jesdRst     => jesdRst,
-       adcValues   => s_adcValues,
-       adcValids   => s_adcValids,
-       trigIn      => caldsp_gate,
-       dacOut      => caldsp_dac,
-       debugValues => caldsp_debugValues,
-       debugValids => caldsp_debugValids,
-       -- AXI-Lite Port
-       axilClk         => axilClk,
-       axilRst         => axilRst,
-       axilReadMaster  => axilReadMasters (CALDSP_INDEX_C),
-       axilReadSlave   => axilReadSlaves  (CALDSP_INDEX_C),
-       axilWriteMaster => axilWriteMasters(CALDSP_INDEX_C),
-       axilWriteSlave  => axilWriteSlaves (CALDSP_INDEX_C) );
-       
+   GEN_PROBE_CAL : if USE_PROBE_CAL_C generate
+     U_SYNC_CALDSP_GATE : entity surf.Synchronizer
+       port map (
+         clk     => jesdClk(0),
+         dataIn  => timingTrig.trigPulse(12),
+         dataOut => caldsp_gate );
+     
+     U_CalDsp : entity sysgen_dsp_lib.CalDspWrapper
+       port map (
+         jesdClk     => jesdClk,
+         jesdRst     => jesdRst,
+         adcValues   => s_adcValues,
+         adcValids   => s_adcValids,
+         trigIn      => caldsp_gate,
+         dacOut      => caldsp_dac,
+         debugValues => caldsp_debugValues,
+         debugValids => caldsp_debugValids,
+         -- AXI-Lite Port
+         axilClk         => axilClk,
+         axilRst         => axilRst,
+         axilReadMaster  => axilReadMasters (CALDSP_INDEX_C),
+         axilReadSlave   => axilReadSlaves  (CALDSP_INDEX_C),
+         axilWriteMaster => axilWriteMasters(CALDSP_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves (CALDSP_INDEX_C) );
+   end generate;
+   
    U_SysGen : entity xil_defaultlib.AppLlrfCore
       generic map (
          TPD_G                => TPD_G,
@@ -402,7 +405,7 @@ begin
          jesdRst2x      => jesdRst2x,
          adcHs          => s_adcValues,
          adcHsValid     => s_adcValids,
-         dacHs          => s_dacHs,
+         dacHs          => app_dac,
          dacLs          => s_dacLs,
          debug          => s_debugValues,
          debugValids    => s_debugValids,
@@ -448,33 +451,36 @@ begin
                   timingOut => timingMessage );
 
      streamMaster                 <= AXI_STREAM_MASTER_INIT_C;
-     axilReadSlaves (BLD_INDEX_C) <= AXI_LITE_READ_SLAVE_INIT_C;
-     axilWriteSlaves(BLD_INDEX_C) <= AXI_LITE_WRITE_SLAVE_INIT_C;
    end generate;
 
    GEN_LCLS_II : if APP_TIMING_MODE_C = 2 generate
      timingMessage <= timingBus.message;
 
-     U_BLD : entity xil_defaultlib.BldWrapper
-       generic map ( NUM_EDEFS_G => 2 )
-       port map (
-         -- Diagnostic data interface
-         diagnosticClk   => diagnClk,
-         diagnosticRst   => diagnRst,
-         diagnosticBus   => diagnBus,
-         -- AXI Lite interface
-         axilClk         => axilClk,
-         axilRst         => axilRst,
-         axilReadMaster  => axilReadMasters (BLD_INDEX_C),
-         axilReadSlave   => axilReadSlaves  (BLD_INDEX_C),
-         axilWriteMaster => axilWriteMasters(BLD_INDEX_C),
-         axilWriteSlave  => axilWriteSlaves (BLD_INDEX_C),
-         -- Timing ETH MSG Interface (axilClk domain)
-         ibEthMsgMaster  => AXI_STREAM_MASTER_INIT_C,
-         ibEthMsgSlave   => open,
-         obEthMsgMaster  => streamMaster,
-         obEthMsgSlave   => streamSlave );
-
+     GEN_BLD : if USE_BSVC_C generate
+       U_BLD : entity xil_defaultlib.BldWrapper
+         generic map ( NUM_EDEFS_G => 2 )
+         port map (
+           -- Diagnostic data interface
+           diagnosticClk   => diagnClk,
+           diagnosticRst   => diagnRst,
+           diagnosticBus   => diagnBus,
+           -- AXI Lite interface
+           axilClk         => axilClk,
+           axilRst         => axilRst,
+           axilReadMaster  => axilReadMasters (BLD_INDEX_C),
+           axilReadSlave   => axilReadSlaves  (BLD_INDEX_C),
+           axilWriteMaster => axilWriteMasters(BLD_INDEX_C),
+           axilWriteSlave  => axilWriteSlaves (BLD_INDEX_C),
+           -- Timing ETH MSG Interface (axilClk domain)
+           ibEthMsgMaster  => AXI_STREAM_MASTER_INIT_C,
+           ibEthMsgSlave   => open,
+           obEthMsgMaster  => streamMaster,
+           obEthMsgSlave   => streamSlave );
+     end generate;
+     NO_GEN_BLD : if not USE_BSVC_C generate
+       streamMaster                 <= AXI_STREAM_MASTER_INIT_C;
+     end generate;
+     
    end generate;
 
    timingMessageSlv <= toSlv(timingMessage);
@@ -495,26 +501,32 @@ begin
 
    diagnBus.timingMessage <= toTimingMessageType(timingMessageSlvO);
 
-   BSSS : entity xil_defaultlib.BsssWrapper
-     generic map ( NUM_EDEFS_G => 8 )
-     port map (
-       -- Diagnostic data interface
-       diagnosticClk   => diagnClk,
-       diagnosticRst   => diagnRst,
-       diagnosticBus   => diagnBus,
-       -- AXI Lite interface
-       axilClk         => axilClk,
-       axilRst         => axilRst,
-       axilReadMaster  => axilReadMasters (BSSS_INDEX_C),
-       axilReadSlave   => axilReadSlaves  (BSSS_INDEX_C),
-       axilWriteMaster => axilWriteMasters(BSSS_INDEX_C),
-       axilWriteSlave  => axilWriteSlaves (BSSS_INDEX_C),
-       -- Timing ETH MSG Interface (axilClk domain)
-       ibEthMsgMaster  => streamMaster,
-       ibEthMsgSlave   => streamSlave,
-       obEthMsgMaster  => obBpMsgServerMaster,
-       obEthMsgSlave   => obBpMsgServerSlave );
-
+   GEN_BSSS : if USE_BSVC_C generate
+     BSSS : entity xil_defaultlib.BsssWrapper
+       generic map ( NUM_EDEFS_G => 8 )
+       port map (
+         -- Diagnostic data interface
+         diagnosticClk   => diagnClk,
+         diagnosticRst   => diagnRst,
+         diagnosticBus   => diagnBus,
+         -- AXI Lite interface
+         axilClk         => axilClk,
+         axilRst         => axilRst,
+         axilReadMaster  => axilReadMasters (BSSS_INDEX_C),
+         axilReadSlave   => axilReadSlaves  (BSSS_INDEX_C),
+         axilWriteMaster => axilWriteMasters(BSSS_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves (BSSS_INDEX_C),
+         -- Timing ETH MSG Interface (axilClk domain)
+         ibEthMsgMaster  => streamMaster,
+         ibEthMsgSlave   => streamSlave,
+         obEthMsgMaster  => obBpMsgServerMaster,
+         obEthMsgSlave   => obBpMsgServerSlave );
+   end generate;
+   NO_GEN_BSSS : if not USE_BSVC_C generate
+     obBpMsgServerMaster <= streamMaster;
+     streamSlave         <= obBpMsgServerSlave;
+   end generate;
+   
    diagnosticClk <= diagnClk;
    diagnosticRst <= diagnRst;
    diagnosticBus <= diagnBus;
@@ -550,9 +562,6 @@ begin
        axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
        axilWriteSlave  => open
        );
-
-   axilReadSlaves  (MMCM_DRP_INDEX_C) <= AXI_LITE_READ_SLAVE_INIT_C;
-   axilWriteSlaves (MMCM_DRP_INDEX_C) <= AXI_LITE_WRITE_SLAVE_INIT_C;
 
    -----------------------
    -- AMC BAY[0] Interface
@@ -776,9 +785,10 @@ begin
 	 mAxisSlave      => obAppDebugSlave);
 
    -- jesdClk domain
-   debugValues <= s_debugValues when caldsp_gate = '1' else caldsp_debugValues;
+   debugValues <= s_debugValues when caldsp_gate = '0' else caldsp_debugValues;
    debugValids <= s_debugValids when caldsp_gate = '0' else caldsp_debugValids;
-
+   s_dacHs     <= app_dac       when caldsp_gate = '0' else caldsp_dac;
+   
    --------------------------
    -- Terminate usued outputs
    --------------------------
