@@ -343,7 +343,7 @@ begin
          CORE_TRIGGERS_G => 13,
          AXIL_RINGB_G    => false,        -- false = no AxiLiteRingBuffer from TimingCore
          CLKSEL_MODE_G   => APP_CLKSEL_STR_C,
-         USE_TPGMINI_G   => false,
+         USE_TPGMINI_G   => true,
          APP_TYPE_G      => APP_NULL_TYPE_C)  -- Configured by application (refer to AmcCarrierPkg for list of all application types
       port map (
          ----------------------
