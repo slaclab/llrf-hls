@@ -41,6 +41,10 @@ mmio: &mmio
         children:
           AppMps:
             instantiate: false
+          AmcCarrierBsa:
+            children:
+              BsaBufferControl:
+                instantiate: false
     ##################################################
     AppTop:
       <<: *AppTopIndependent
