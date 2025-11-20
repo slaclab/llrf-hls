@@ -243,6 +243,7 @@ architecture mapping of AppCore is
    signal app_dac            : slv(31 downto 0);
    signal caldsp_dac         : slv(31 downto 0);
    signal caldsp_dacEn       : sl;
+   signal caldsp_slowDac     : slv(15 downto 0);
    signal caldsp_debugValues : sampleDataVectorArray(1 downto 0,3 downto 0);
    signal caldsp_debugValids : Slv4Array(1 downto 0);
    signal caldsp_gate        : sl := '0';
@@ -279,7 +280,7 @@ begin
    dacValues(1,0) <= s_dacHs;
    dacValues(1,1) <= s_dacHs;
    dacValues(1,2) <= s_dacHs;
-   dacValues(1,3) <= s_dacHs;
+   dacValues(1,3) <= caldsp_slowDac;
    dacValues(1,4) <= s_dacHs;
    dacValues(1,5) <= s_dacHs;
    dacValues(1,6) <= s_dacHs;
@@ -383,6 +384,7 @@ begin
          trigIn      => caldsp_gate,
          dacEn       => caldsp_dacEn,
          dacOut      => caldsp_dac,
+         slowDac     => open,
          debugValues => caldsp_debugValues,
          debugValids => caldsp_debugValids,
          -- AXI-Lite Port
@@ -787,8 +789,8 @@ begin
 	 mAxisSlave      => obAppDebugSlave);
 
    -- jesdClk domain
-   debugValues <= s_debugValues when caldsp_gate  = '0' else caldsp_debugValues;
-   debugValids <= s_debugValids when caldsp_gate  = '0' else caldsp_debugValids;
+   debugValues <= s_debugValues when caldsp_dacEn = '0' else caldsp_debugValues;
+   debugValids <= s_debugValids when caldsp_dacEn = '0' else caldsp_debugValids;
    s_dacHs     <= app_dac       when caldsp_dacEn = '0' else caldsp_dac;
    
    --------------------------
