@@ -793,7 +793,7 @@ begin
    debugValues <= s_debugValues when caldsp_dacEn = '0' else caldsp_debugValues;
    debugValids <= s_debugValids when caldsp_dacEn = '0' else caldsp_debugValids;
    s_dacHs     <= app_dac       when caldsp_dacEn = '0' else caldsp_dac;
-   s_dacLsExt  <= s_dacLs(2)    when caldsp_dacEn = '0' else caldsp_slowDac;
+   s_dacLsExt  <= s_dacLs(2)(15 downto 0) when caldsp_dacEn = '0' else caldsp_slowDac;
      
    --------------------------
    -- Terminate usued outputs
