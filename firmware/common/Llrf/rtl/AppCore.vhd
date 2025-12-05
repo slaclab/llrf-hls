@@ -247,7 +247,7 @@ architecture mapping of AppCore is
    signal caldsp_debugValues : sampleDataVectorArray(1 downto 0,3 downto 0);
    signal caldsp_debugValids : Slv4Array(1 downto 0);
    signal caldsp_gate        : sl := '0';
-   signal s_dacLsExt         : slv(15 downto 0);
+   signal s_dacLsExt         : slv(31 downto 0);
    
    constant DEBUG_C : boolean := true;
 
@@ -273,7 +273,7 @@ begin
    dacValids <= (others => (others => '1'));
    dacValues(0,0) <= s_dacLs(0);
    dacValues(0,1) <= s_dacLs(1);
-   dacValues(0,2) <= toSlv(0,16) & s_dacLsExt;
+   dacValues(0,2) <= s_dacLsExt;
    dacValues(0,3) <= s_dacHs;
    dacValues(0,4) <= (others => '0');
    dacValues(0,5) <= (others => '0');
@@ -584,7 +584,7 @@ begin
          -- DAC Interface (jesdClk domain)
          dacValues(0)    => s_dacLs(0)(15 downto 0),
          dacValues(1)    => s_dacLs(1)(15 downto 0),
-         dacValues(2)    => s_dacLsExt,
+         dacValues(2)    => s_dacLsExt(15 downto 0),
          -- AXI-Lite Interface
          axilClk         => axilClk,
          axilRst         => axilRst,
@@ -793,7 +793,7 @@ begin
    debugValues <= s_debugValues when caldsp_dacEn = '0' else caldsp_debugValues;
    debugValids <= s_debugValids when caldsp_dacEn = '0' else caldsp_debugValids;
    s_dacHs     <= app_dac       when caldsp_dacEn = '0' else caldsp_dac;
-   s_dacLsExt  <= s_dacLs(2)(15 downto 0) when caldsp_dacEn = '0' else caldsp_slowDac;
+   s_dacLsExt  <= s_dacLs(2)    when caldsp_dacEn = '0' else (caldsp_slowDac & caldsp_slowDac);
      
    --------------------------
    -- Terminate usued outputs
